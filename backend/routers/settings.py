@@ -13,22 +13,35 @@ router = APIRouter()
 
 SETTINGS_CACHE = os.path.join(os.path.dirname(__file__), '..', '.fairsight_webhook_config.json')
 
+# In-memory config store — always available (Render ephemeral FS safe)
+_MEMORY_CONFIGS: dict = {}
+
 
 def _load_configs() -> dict:
+    # Primary: in-memory (always works, incl. Render/serverless)
+    if _MEMORY_CONFIGS:
+        return dict(_MEMORY_CONFIGS)
+    # Secondary: try local JSON file (works on localhost)
     try:
         if os.path.exists(SETTINGS_CACHE):
             with open(SETTINGS_CACHE, 'r') as f:
-                return json.load(f)
+                data = json.load(f)
+                _MEMORY_CONFIGS.update(data)
+                return data
     except Exception:
         pass
     return {}
 
 
 def _save_config(uid: str, config: dict):
-    all_configs = _load_configs()
-    all_configs[uid] = config
-    with open(SETTINGS_CACHE, 'w') as f:
-        json.dump(all_configs, f, indent=2)
+    _MEMORY_CONFIGS[uid] = config
+    # Best-effort persist to file (will silently fail on read-only FS like Render)
+    try:
+        all_configs = dict(_MEMORY_CONFIGS)
+        with open(SETTINGS_CACHE, 'w') as f:
+            json.dump(all_configs, f, indent=2)
+    except Exception:
+        pass  # In-memory is the source of truth; file write failures are non-fatal
 
 
 def get_webhook_config(uid: str) -> dict:

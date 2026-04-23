@@ -13,12 +13,30 @@ app = FastAPI(
     description="Real-time AI bias detection and monitoring platform"
 )
 
+# Build list of allowed origins dynamically
+# In production on Render, ALLOW_ALL_ORIGINS=true or set multiple FRONTEND_URL values
+_frontend_url = os.getenv("FRONTEND_URL", "")
+_allow_all = os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true"
+
+if _allow_all:
+    _origins = ["*"]
+else:
+    _origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    # Add every URL in FRONTEND_URL (comma-separated list supported)
+    for url in _frontend_url.split(","):
+        url = url.strip()
+        if url:
+            _origins.append(url)
+            # Also add without trailing slash and with www variant
+            _origins.append(url.rstrip("/"))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        os.getenv("FRONTEND_URL", "https://your-domain.vercel.app")
-    ],
+    allow_origins=_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app" if not _allow_all else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

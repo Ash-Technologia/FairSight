@@ -32,14 +32,33 @@ async def debias_dataset(
 
     try:
         protected = json.loads(protected_columns)
-    except:
+    except Exception:
         protected = []
 
     target_col = target_column
     label_col = label_column
+    available = df.columns.tolist()
+
+    # Auto-detect target column if default not found
+    if target_col not in available:
+        candidates = [c for c in available if any(k in c.lower() for k in ['predict', 'label', 'outcome', 'decision', 'result', 'score'])]
+        target_col = candidates[0] if candidates else available[-1]
+
+    # Auto-detect label column — fall back to target column if missing
+    if label_col not in available:
+        label_col = target_col
+
+    # Auto-detect protected columns if none provided or none match
+    if not protected or not any(c in available for c in protected):
+        demo_kw = ['race', 'gender', 'sex', 'age', 'ethnicity', 'nationality', 'religion']
+        protected = [c for c in available if any(k in c.lower() for k in demo_kw)]
+
+    if not protected:
+        raise HTTPException(status_code=422, detail=f"No protected attribute columns detected. Available columns: {available}")
 
     if len(df) == 0:
         raise HTTPException(status_code=400, detail="Empty dataset")
+
 
     if len(df) > 50000:
         raise HTTPException(status_code=413, detail="Dataset too large for debiasing (max 50,000 rows)")

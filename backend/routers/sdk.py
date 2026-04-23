@@ -11,36 +11,54 @@ from routers.monitor import EVENT_QUEUE, push_event
 
 router = APIRouter()
 
-# In-memory store for SDK decision batches (use Redis in production)
+# In-memory decision store (use Redis in production)
 decision_store: dict = {}
 
+# In-memory API key store — populated when keys are created via POST /api/keys
+# In production you'd use Redis or Firebase. For hackathon, in-memory is fine.
+_VALID_KEY_PREFIXES: set = set()
+
+
+def register_api_key(key_prefix: str):
+    """Called by the keys route when a new key is generated."""
+    _VALID_KEY_PREFIXES.add(key_prefix)
+
+
 def verify_api_key(api_key: str) -> bool:
-    key_file = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", ".fairsight_api_keys.json")
-    if not os.path.exists(key_file):
-        return api_key == "demo-sdk-key"
+    """
+    Accept:
+      1. 'demo-sdk-key'  — always valid for demos
+      2. Any key starting with a registered prefix (fs_live_...)
+      3. Fall back to reading local file if it exists (localhost dev)
+    """
+    if api_key == "demo-sdk-key":
+        return True
+
+    # Check in-memory registered prefixes first (works on Render)
+    for prefix in _VALID_KEY_PREFIXES:
+        if api_key.startswith(prefix):
+            return True
+
+    # Fallback: try reading local key file (localhost dev only)
     try:
-        # FIX C3: Read all keys into memory FIRST (closes file handle via context manager).
-        # Previously, the code opened for reading, modified in-memory, then opened for
-        # writing while the read handle was still alive — on Windows this raises
-        # PermissionError and the entire verification silently falls back to demo-sdk-key.
-        with open(key_file, "r") as f:
-            keys = json.load(f)
-
-        valid = False
-        for k in keys:
-            if not k.get("revoked", False) and api_key.startswith(k.get("key_prefix", "")):
-                k["events_this_month"] = k.get("events_this_month", 0) + 1
-                k["last_used"] = time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-                valid = True
-
-        # Write back only after read handle is fully closed
-        with open(key_file, "w") as f:
-            json.dump(keys, f, indent=2)
-
-        return valid
+        # Search several candidate paths
+        candidates = [
+            os.path.join(os.path.dirname(__file__), "..", ".fairsight_api_keys.json"),
+            os.path.join(os.path.dirname(__file__), "..", "..", "frontend", ".fairsight_api_keys.json"),
+        ]
+        for key_file in candidates:
+            if os.path.exists(key_file):
+                with open(key_file, "r") as f:
+                    keys = json.load(f)
+                for k in keys:
+                    if not k.get("revoked", False) and api_key.startswith(k.get("key_prefix", "")):
+                        return True
     except Exception:
         pass
+
     return False
+
+
 
 
 
