@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   title: 'FairSight — Real-Time AI Bias Detection',
   description: 'FairSight monitors deployed ML models in real-time, detecting and explaining bias using 12+ fairness metrics and AI-powered plain language verdicts.',
   keywords: 'AI bias detection, algorithmic fairness, machine learning, fairness metrics, bias audit',
+  icons: {
+    icon: 'https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/scale.svg',
+  },
   openGraph: {
     title: 'FairSight — Real-Time AI Bias Detection',
     description: 'Live bias monitoring for deployed ML models. One SDK line. Zero architecture change.',
