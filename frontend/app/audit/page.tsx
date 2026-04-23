@@ -60,11 +60,12 @@ export default function AuditPage() {
       formData.append('uid', user?.uid ?? 'guest')
 
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000'
+      const cleanUrl = backendUrl.replace(/\/$/, '')
 
       let metricsData: any
 
       try {
-        const metricsRes = await fetch(`${backendUrl}/analyze/`, {
+        const metricsRes = await fetch(`${cleanUrl}/analyze`, {
           method: 'POST',
           body: formData,
         })

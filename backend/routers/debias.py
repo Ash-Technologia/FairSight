@@ -1,6 +1,6 @@
 # backend/routers/debias.py
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from services.debias_engine import run_debiasing
 import pandas as pd
@@ -14,19 +14,29 @@ router = APIRouter()
 _DEBIAS_CACHE: dict[str, dict] = {}
 
 @router.post("/{audit_id}")
-async def debias_dataset(audit_id: str, body: dict):
-    protected = body.get("protected_attributes", [])
-    label_col = body.get("label_col", "true_label")
-    target_col = body.get("target_col", "predicted_label")
-    dataset_rows = body.get("dataset_rows")
-
-    if not dataset_rows:
-        raise HTTPException(status_code=400, detail="dataset_rows required in request body")
+async def debias_dataset(
+    audit_id: str,
+    file: UploadFile = File(...),
+    protected_columns: str = Form("[]"),
+    target_column: str = Form("predicted_label"),
+    label_column: str = Form("true_label")
+):
+    content = await file.read()
+    try:
+        try:
+            df = pd.read_csv(io.StringIO(content.decode("utf-8")))
+        except UnicodeDecodeError:
+            df = pd.read_csv(io.StringIO(content.decode("latin-1")))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Parse error: {e}")
 
     try:
-        df = pd.DataFrame(dataset_rows)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Could not parse dataset_rows: {e}")
+        protected = json.loads(protected_columns)
+    except:
+        protected = []
+
+    target_col = target_column
+    label_col = label_column
 
     if len(df) == 0:
         raise HTTPException(status_code=400, detail="Empty dataset")

@@ -5,8 +5,12 @@ import { NextRequest } from 'next/server'
 import { createHash, randomBytes } from 'crypto'
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 
-const KEYS_CACHE = path.join(process.cwd(), '.fairsight_api_keys.json')
+const isVercel = process.env.VERCEL === '1' || process.env.NEXT_PUBLIC_VERCEL_ENV === 'production'
+const KEYS_CACHE = isVercel
+  ? path.join(os.tmpdir(), '.fairsight_api_keys.json')
+  : path.join(process.cwd(), '.fairsight_api_keys.json')
 
 function loadLocalKeys(): any[] {
   try { if (fs.existsSync(KEYS_CACHE)) return JSON.parse(fs.readFileSync(KEYS_CACHE, 'utf-8')) } catch {}

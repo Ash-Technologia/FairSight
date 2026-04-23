@@ -35,12 +35,15 @@ export function DebiasingPanel({ originalFile, protectedColumns, targetColumn, c
   const runPreview = async (file: File) => {
     setPreviewing(true)
     setPreview(null)
+    const auditId = window.location.pathname.split('/').pop() || 'unknown'
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000'
+    const cleanUrl = backendUrl.replace(/\/$/, '')
     try {
       const fd = new FormData()
       fd.append('file', file)
       fd.append('protected_columns', JSON.stringify(protectedColumns))
       fd.append('target_column', targetColumn)
-      const res = await fetch('/api/debias', { method: 'POST', body: fd })
+      const res = await fetch(`${cleanUrl}/debias/${auditId}`, { method: 'POST', body: fd })
       if (res.ok) setPreview(await res.json())
     } catch {}
     finally { setPreviewing(false) }
@@ -55,16 +58,26 @@ export function DebiasingPanel({ originalFile, protectedColumns, targetColumn, c
     if (!activeFile) { fileRef.current?.click(); return }
     setLoading(true)
     setDownloaded(false)
+    const auditId = window.location.pathname.split('/').pop() || 'unknown'
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000'
+    const cleanUrl = backendUrl.replace(/\/$/, '')
     try {
       const fd = new FormData()
       fd.append('file', activeFile)
       fd.append('protected_columns', JSON.stringify(protectedColumns))
       fd.append('target_column', targetColumn)
-      const res = await fetch('/api/debias?action=export', { method: 'POST', body: fd })
+      
+      // Step 1: Generate debiased cache
+      const res = await fetch(`${cleanUrl}/debias/${auditId}`, { method: 'POST', body: fd })
       if (!res.ok) { console.error(await res.text()); return }
-      const blob = await res.blob()
-      const cdh  = res.headers.get('Content-Disposition') || ''
-      const name = cdh.match(/filename="([^"]+)"/)?.[1] || 'debiased.csv'
+      
+      // Step 2: Download
+      const resDl = await fetch(`${cleanUrl}/debias/${auditId}/download`)
+      if (!resDl.ok) { console.error(await resDl.text()); return }
+
+      const blob = await resDl.blob()
+      const cdh  = resDl.headers.get('Content-Disposition') || ''
+      const name = cdh.match(/filename="([^"]+)"/)?.[1] || `fairsight_debiased_${auditId.slice(0,8)}.csv`
       const url  = URL.createObjectURL(blob)
       const a    = document.createElement('a')
       a.href = url; a.download = name; a.click()

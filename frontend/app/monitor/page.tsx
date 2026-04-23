@@ -61,7 +61,8 @@ export default function MonitorPage() {
 
     try {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://127.0.0.1:8000'
-      const res = await fetch(`${backendUrl}/monitor/stream_real_dataset`, {
+      const cleanUrl = backendUrl.replace(/\/$/, '')
+      const res = await fetch(`${cleanUrl}/monitor/stream_real_dataset`, {
         method: 'POST',
         body: formData,
       })
