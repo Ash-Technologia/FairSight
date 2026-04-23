@@ -3,10 +3,10 @@ services:
     name: fairsight-backend
     env: python
     rootDir: .
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: ALLOW_ALL_ORIGINS
         value: "true"
       - key: PYTHON_VERSION
-        value: "3.11.0"
+        value: "3.11.9"
