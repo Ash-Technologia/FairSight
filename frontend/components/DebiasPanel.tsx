@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import Papa from 'papaparse'
 import { ArrowLeftRight, CheckCircle2, Download, IterationCcw, Loader2 } from 'lucide-react'
 
 interface DebiasResult {
@@ -19,15 +18,17 @@ interface DebiasResult {
   download_ready: boolean
 }
 
-export function DebiasPanel({ audit, onReAudit }: { audit: any, onReAudit: (csvContent: string) => Promise<void> }) {
+const getBackendUrl = () =>
+  (process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000').replace(/\/$/, '')
+
+export function DebiasPanel({ audit, onReAudit }: { audit: any; onReAudit: (csvContent: string) => Promise<void> }) {
   const [state, setState] = useState<'idle' | 'loading' | 'ready' | 're-auditing' | 're-audit-done'>('idle')
   const [fileNeeded, setFileNeeded] = useState(false)
   const [debiasData, setDebiasData] = useState<DebiasResult | null>(null)
   const [fileObject, setFileObject] = useState<File | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
 
-  const handleGenerate = () => {
-    // Check if we have the file in window state
+  const handleGenerate = async () => {
     const w = window as any
     const f = fileObject || w.__fairsight_last_file
 
@@ -39,51 +40,80 @@ export function DebiasPanel({ audit, onReAudit }: { audit: any, onReAudit: (csvC
     setState('loading')
     setErrorMsg('')
 
-    Papa.parse(f, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
+    try {
+      const backendUrl = getBackendUrl()
+      const auditId = audit.id ?? `local-${Date.now()}`
+
+      // Build protected columns list from audit data
+      const protectedCols: string[] = (
+        audit.protectedColumns ??
+        audit.affectedGroups ??
+        []
+      ).filter((c: string) => typeof c === 'string' && c.length > 0)
+
+      const fd = new FormData()
+      fd.append('file', f)
+      fd.append('protected_columns', JSON.stringify(protectedCols))
+      fd.append('target_column', 'predicted_label')
+      fd.append('label_column', 'true_label')
+
+      const res = await fetch(`${backendUrl}/debias/${auditId}`, {
+        method: 'POST',
+        body: fd,
+      })
+
+      if (!res.ok) {
+        let detail = `Server error (${res.status})`
         try {
-          const res = await fetch(`/api/debias?id=${audit.id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              protected_attributes: audit.affectedGroups || ["race", "gender", "age"],
-              label_col: "true_label", // Ideally these come from context
-              target_col: "predicted_label",
-              dataset_rows: results.data
-            })
-          })
-
-          if (!res.ok) {
-            const err = await res.json()
-            throw new Error(err.detail || 'Debiasing failed')
-          }
-
-          const data = await res.json()
-          setDebiasData(data)
-          setState('ready')
-        } catch (err: any) {
-          setErrorMsg(err.message)
-          setState('idle')
+          const err = await res.json()
+          detail = err.detail || detail
+        } catch {
+          const text = await res.text()
+          // If HTML (404 page etc.), give a clear message
+          if (text.startsWith('<')) detail = `Backend not reachable (${res.status}). Check NEXT_PUBLIC_BACKEND_URL.`
         }
+        throw new Error(detail)
       }
-    })
+
+      const data = await res.json()
+      setDebiasData(data)
+      setState('ready')
+    } catch (err: any) {
+      setErrorMsg(err.message ?? 'Debiasing failed')
+      setState('idle')
+    }
   }
 
-  const handleDownload = () => {
-    window.location.href = `/api/debias?id=${audit.id}`
+  const handleDownload = async () => {
+    try {
+      const backendUrl = getBackendUrl()
+      const auditId = audit.id ?? 'unknown'
+      const res = await fetch(`${backendUrl}/debias/${auditId}/download`)
+      if (!res.ok) throw new Error(`Download failed (${res.status})`)
+      const blob = await res.blob()
+      const cdh = res.headers.get('Content-Disposition') || ''
+      const name = cdh.match(/filename="([^"]+)"/)?.[1] || `fairsight_debiased_${String(auditId).slice(0, 8)}.csv`
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = name
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      setErrorMsg(err.message ?? 'Download failed')
+    }
   }
 
   const handleReAudit = async () => {
     setState('re-auditing')
     try {
-      // First fetch the new debiased csv
-      const res = await fetch(`/api/debias?id=${audit.id}`)
+      const backendUrl = getBackendUrl()
+      const auditId = audit.id ?? 'unknown'
+      const res = await fetch(`${backendUrl}/debias/${auditId}/download`)
       const csvContent = await res.text()
       await onReAudit(csvContent)
       setState('re-audit-done')
-    } catch(err) {
+    } catch (err) {
       console.error(err)
       setState('ready')
     }
@@ -102,11 +132,11 @@ export function DebiasPanel({ audit, onReAudit }: { audit: any, onReAudit: (csvC
       </div>
 
       <div style={{ padding: '30px' }}>
-        {state === 'idle' || fileNeeded ? (
+        {(state === 'idle' || fileNeeded) && (
           <div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
               <div style={{ fontSize: 14, color: 'var(--navy-light)' }}>
-                <strong>Algorithm:</strong> IBM Reweighing (Kamiran & Calders, 2012)
+                <strong>Algorithm:</strong> IBM Reweighing (Kamiran &amp; Calders, 2012)
               </div>
               <div style={{ fontSize: 14, color: 'var(--slate)' }}>
                 <strong>What it does:</strong> Assigns per-sample weights so minority groups are fairly represented during model training.
@@ -115,34 +145,47 @@ export function DebiasPanel({ audit, onReAudit }: { audit: any, onReAudit: (csvC
 
             {fileNeeded && (
               <div style={{ marginBottom: 20, padding: 16, border: '1px dashed var(--border)', borderRadius: 8 }}>
-                <p style={{ fontSize: 14, color: 'var(--amber-dark)' }}>Re-upload the original dataset to enable debiasing.</p>
-                <input type="file" accept=".csv" onChange={e => {
-                  if (e.target.files?.[0]) {
-                    setFileObject(e.target.files[0])
-                    setFileNeeded(false)
-                  }
-                }} />
+                <p style={{ fontSize: 14, color: 'var(--amber-dark)', marginBottom: 10 }}>
+                  Re-upload the original dataset to enable debiasing.
+                </p>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={e => {
+                    if (e.target.files?.[0]) {
+                      setFileObject(e.target.files[0])
+                      setFileNeeded(false)
+                    }
+                  }}
+                />
               </div>
             )}
 
-            {errorMsg && <div style={{ color: 'var(--red)', fontSize: 14, marginBottom: 12 }}>{errorMsg}</div>}
+            {errorMsg && (
+              <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12, padding: '10px 14px', background: 'var(--red-dim)', borderRadius: 8, border: '1px solid var(--red)' }}>
+                ⚠ {errorMsg}
+              </div>
+            )}
 
-            <button 
+            <button
               onClick={handleGenerate}
               style={{ width: '100%', padding: 14, background: 'var(--teal)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 500, fontSize: 15, cursor: 'pointer' }}
             >
               Generate Debiased Dataset →
             </button>
           </div>
-        ) : state === 'loading' ? (
+        )}
+
+        {state === 'loading' && (
           <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--slate)' }}>
-            <Loader2 className="spin" size={32} style={{ color: 'var(--teal)', marginBottom: 16 }} />
+            <Loader2 size={32} style={{ color: 'var(--teal)', marginBottom: 16, animation: 'spin 1s linear infinite' }} />
             <div style={{ fontWeight: 500 }}>Running IBM Reweighing Algorithm...</div>
           </div>
-        ) : debiasData && (
+        )}
+
+        {(state === 'ready' || state === 're-auditing' || state === 're-audit-done') && debiasData && (
           <div>
             <h4 style={{ margin: '0 0 16px', fontSize: 16, color: 'var(--navy)' }}>Before vs After</h4>
-            
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border)' }}>
@@ -177,7 +220,7 @@ export function DebiasPanel({ audit, onReAudit }: { audit: any, onReAudit: (csvC
 
             {state === 're-auditing' ? (
               <div style={{ textAlign: 'center', marginTop: 24, padding: 16 }}>
-                 <Loader2 className="spin" size={24} style={{ color: 'var(--teal)' }} />
+                <Loader2 size={24} style={{ color: 'var(--teal)', animation: 'spin 1s linear infinite' }} />
               </div>
             ) : state === 're-audit-done' ? (
               <div style={{ marginTop: 24, padding: 16, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, color: '#15803d', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -188,15 +231,14 @@ export function DebiasPanel({ audit, onReAudit }: { audit: any, onReAudit: (csvC
               </div>
             ) : (
               <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-                <button 
+                <button
                   onClick={handleDownload}
                   style={{ flex: 1, padding: 12, background: 'none', border: '1px solid var(--border)', color: 'var(--navy)', borderRadius: 8, fontWeight: 500, fontSize: 14, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
                 >
                   <Download size={18} />
                   Download Debiased CSV
                 </button>
-                
-                <button 
+                <button
                   onClick={handleReAudit}
                   style={{ flex: 1, padding: 12, background: 'var(--teal)', border: 'none', color: '#fff', borderRadius: 8, fontWeight: 500, fontSize: 14, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
                 >
