@@ -1,6 +1,7 @@
 // frontend/app/api/constitution/validate/route.ts
 import { NextRequest } from 'next/server'
-import { adminDb } from '@/lib/firebaseAdmin'
+import { db } from '@/lib/firebase'
+import { doc, getDoc } from 'firebase/firestore'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
@@ -13,9 +14,11 @@ export async function GET(req: NextRequest) {
 
   try {
     // 1. Fetch Audit
-    const doc = await adminDb.collection('audits').doc(audit_id).get()
-    if (!doc.exists) return Response.json({ error: 'Audit not found' }, { status: 404 })
-    const audit = doc.data()!
+    if (!db) return Response.json({ error: 'Database not initialized' }, { status: 500 })
+    const docRef = doc(db, 'audits', audit_id)
+    const docSnap = await getDoc(docRef)
+    if (!docSnap.exists()) return Response.json({ error: 'Audit not found' }, { status: 404 })
+    const audit = docSnap.data()!
 
     // 2. Fetch Rules from the in-memory endpoint (we must fetch from the local route via HTTP since memory is isolated per file)
     const host = req.headers.get('host')
