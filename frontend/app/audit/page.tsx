@@ -43,26 +43,40 @@ export default function AuditPage() {
     setErrorMsg('')
     setIsSlow(false)
 
-    // Store file reference for debiased download in DetailedAuditReport
+    // Store file reference for debiased download
     ;(window as any).__fairsight_last_file = file
 
     // Show slow warning after 20s
     const slowTimer = setTimeout(() => setIsSlow(true), 20000)
 
     try {
+      // ── Auto-detect protected columns from CSV headers ─────────────────────
+      // Instead of hardcoding ['race','gender','age'], parse the CSV headers
+      // and pick any columns that match known demographic keywords.
+      let detectedProtected: string[] = []
+      try {
+        const text = await file.text()
+        const firstLine = text.split('\n')[0] || ''
+        const headers = firstLine.split(',').map(h => h.trim().replace(/^["']|["']$/g, '').toLowerCase())
+        const demoKeywords = ['race', 'gender', 'sex', 'age', 'ethnicity', 'nationality', 'religion', 'disability']
+        detectedProtected = headers.filter(h => demoKeywords.some(k => h.includes(k)))
+      } catch { /* ignore parse errors — backend will auto-detect */ }
+
       // ── Step 1: Backend statistical analysis ──────────────────────────────
       setState('analyzing')
       setProgress(15)
 
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('protected_attributes', JSON.stringify(['race', 'gender', 'age']))
+      // Send detected columns; if empty, backend will auto-detect
+      formData.append('protected_attributes', JSON.stringify(detectedProtected))
       formData.append('uid', user?.uid ?? 'guest')
 
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000'
       const cleanUrl = backendUrl.replace(/\/$/, '')
 
       let metricsData: any
+      let usedMock = false
 
       try {
         const metricsRes = await fetch(`${cleanUrl}/analyze`, {
@@ -72,31 +86,48 @@ export default function AuditPage() {
 
         if (!metricsRes.ok) {
           const errText = await metricsRes.text()
-          console.warn(`Backend returned ${metricsRes.status}: ${errText.slice(0, 200)}`)
-          console.warn('Falling back to mock metrics')
-          metricsData = getMockMetrics(file.name)
+          let errDetail = errText.slice(0, 300)
+          try {
+            const parsed = JSON.parse(errText)
+            errDetail = parsed.detail || parsed.error || errDetail
+          } catch { }
+          // Only fall back to mock on dev/localhost; on prod surface the error
+          if (cleanUrl.includes('localhost') || cleanUrl.includes('127.0.0.1')) {
+            console.warn(`Backend ${metricsRes.status}: ${errDetail} — using mock metrics`)
+            metricsData = getMockMetrics(file.name)
+            usedMock = true
+          } else {
+            throw new Error(`Analysis failed (${metricsRes.status}): ${errDetail}`)
+          }
         } else {
           metricsData = await metricsRes.json()
         }
       } catch (networkErr: any) {
-        console.warn('Backend unreachable, using mock metrics:', networkErr.message)
-        metricsData = getMockMetrics(file.name)
+        if (cleanUrl.includes('localhost') || cleanUrl.includes('127.0.0.1')) {
+          console.warn('Backend unreachable on localhost, using mock metrics:', networkErr.message)
+          metricsData = getMockMetrics(file.name)
+          usedMock = true
+        } else {
+          throw new Error(
+            `Cannot reach FairSight backend at ${cleanUrl}. ` +
+            `Ensure NEXT_PUBLIC_BACKEND_URL is correctly set on Vercel, and the Render service is running. ` +
+            `Error: ${networkErr.message}`
+          )
+        }
       }
 
       setProgress(50)
 
       // ── Step 2: AI Consensus ──────────────────────────────────────────────
-      // Normalise: backend returns { metrics: {...}, flip_test, feature_importance, ... }
-      // We pass metrics as a flat object enriched with extra fields for the AI
       const metricsPayload = {
-        // Spread whichever level contains by_attribute
         ...(metricsData.metrics ?? metricsData),
-        // Always include these top-level fields in the metrics payload
         flip_test: metricsData.flip_test ?? metricsData.metrics?.flip_test ?? {},
         feature_importance:
           metricsData.feature_importance ?? metricsData.metrics?.feature_importance ?? {},
         dataset_hash: metricsData.dataset_hash ?? metricsData.metrics?.dataset_hash ?? '',
         row_count: metricsData.row_count ?? metricsData.metrics?.row_count ?? 0,
+        protected_attributes: metricsData.protected_attributes ?? detectedProtected,
+        by_attribute: metricsData.by_attribute ?? metricsData.metrics?.by_attribute ?? {},
       }
 
       setProgress(60)
@@ -108,6 +139,15 @@ export default function AuditPage() {
           metrics: metricsPayload,
           filename: file.name,
           uid: user?.uid ?? 'guest',
+          // Pass through top-level fields so api/analyze can correctly map them
+          flip_test: metricsData.flip_test ?? {},
+          feature_importance: metricsData.feature_importance ?? {},
+          dataset_hash: metricsData.dataset_hash ?? '',
+          row_count: metricsData.row_count ?? 0,
+          protected_attributes: metricsData.protected_attributes ?? detectedProtected,
+          by_attribute: metricsData.by_attribute ?? metricsData.metrics?.by_attribute ?? {},
+          pii_warnings: metricsData.pii_warnings ?? null,
+          intersectional: metricsData.intersectional ?? null,
         }),
       })
 
@@ -144,6 +184,7 @@ export default function AuditPage() {
       )
     }
   }
+
 
   return (
     <div className="page-container-narrow">

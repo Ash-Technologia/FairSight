@@ -1,37 +1,42 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 
-// Professional, realistic analysis steps
 const ANALYSIS_STEPS = [
-  'Ingesting dataset and computing baseline metrics...',
-  'Quantifying demographic representation parity...',
-  'Extracting Equalized Odds and Disparate Impact...',
-  'Executing counterfactual margin analysis...',
-  'Polling multi-model AI consensus logic...',
-  'Synthesizing board-ready compliance report...',
+  { label: 'Ingesting dataset & computing baseline', icon: '⬡' },
+  { label: 'Quantifying demographic parity gaps', icon: '⬡' },
+  { label: 'Running counterfactual flip test', icon: '⬡' },
+  { label: 'Detecting proxy features via correlation', icon: '⬡' },
+  { label: 'Generating multi-model AI consensus', icon: '⬡' },
+  { label: 'Compiling compliance audit report', icon: '⬡' },
 ]
 
-// Professional diagnostic log lines instead of "hacker" text
 const DIAGNOSTIC_LOGS = [
-  "INFO: Dimensionality check passed. Protected classes detected.",
-  "COMPUTE: Covariance matrix aligned for sensitive attributes.",
-  "WARN: Potential target variable skew detected in segment [A].",
-  "NET: Establishing secure connection to consensus nodes...",
-  "SHAP: Calculating Shapley values for boundary thresholds.",
-  "INFO: Fairness constraint definitions loaded successfully.",
-  "ML: Executing local decision tree to isolate proxy features.",
-  "DB: Preparing cryptographic hash for audit registry.",
-  "COMPUTE: Iterating gradient steps to optimize threshold...",
-  "INFO: System load nominal. Waiting on external AI provider.",
-  "NET: Handshake verified.",
-  "JSON: Normalizing raw metrics payload for severity mapping.",
+  'Dimensionality check passed. Protected classes detected.',
+  'Covariance matrix aligned for sensitive attributes.',
+  'Target variable skew detected in demographic segment.',
+  'Establishing secure connection to AI consensus nodes…',
+  'Computing Shapley values for feature boundary thresholds.',
+  'Fairness constraint definitions loaded successfully.',
+  'Executing local decision tree to isolate proxy features.',
+  'Preparing cryptographic SHA-256 hash for audit registry.',
+  'Iterating gradient steps to optimize decision threshold…',
+  'System load nominal. Awaiting external AI provider response.',
+  'Handshake verified with Gemini endpoint.',
+  'Normalizing raw metrics payload for severity mapping.',
+  'Demographic Parity computation: complete.',
+  'Equalized Odds computation: complete.',
+  'Disparate Impact Ratio computation: complete.',
+  'Firestore audit document prepared for write.',
 ]
+
+const METRIC_LABELS = ['Demographic Parity', 'Equalized Odds', 'Disparate Impact', 'Flip Rate', 'Calibration Gap']
 
 export function ScanningOverlay({ visible }: { visible: boolean }) {
   const [activeStep, setActiveStep] = useState(-1)
   const [doneSteps, setDoneSteps] = useState<number[]>([])
   const [terminalLines, setTerminalLines] = useState<string[]>([])
   const [progress, setProgress] = useState(0)
+  const [metricValues, setMetricValues] = useState<number[]>([0, 0, 0, 0, 0])
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -40,6 +45,7 @@ export function ScanningOverlay({ visible }: { visible: boolean }) {
       setDoneSteps([])
       setTerminalLines([])
       setProgress(0)
+      setMetricValues([0, 0, 0, 0, 0])
       return
     }
 
@@ -47,59 +53,58 @@ export function ScanningOverlay({ visible }: { visible: boolean }) {
     let step = 0
     setActiveStep(0)
 
-    // Smooth, realistic progress bar curve
+    // Smooth progress bar
     const progT = setInterval(() => {
       if (!isSubscribed) return
       setProgress(p => {
         if (p >= 99) return 99
-        // Slower near the end
-        const increment = p > 80 ? Math.random() * 1.5 : Math.random() * 4 + 1
-        return p + increment
+        const inc = p > 85 ? Math.random() * 0.8 : Math.random() * 3.5 + 0.5
+        return Math.min(99, p + inc)
       })
-    }, 250)
+    }, 200)
 
-    // Log injector - structured, intermittent
+    // Animate metric values
+    const metricT = setInterval(() => {
+      if (!isSubscribed) return
+      setMetricValues(prev => prev.map(() => Math.random()))
+    }, 800)
+
+    // Terminal log injector
     const injectLog = () => {
       if (!isSubscribed) return
-      const randomLog = DIAGNOSTIC_LOGS[Math.floor(Math.random() * DIAGNOSTIC_LOGS.length)]
-      const timeMs = new Date().getMilliseconds().toString().padStart(3, '0')
-      const timeSec = new Date().getSeconds().toString().padStart(2, '0')
-      
+      const log = DIAGNOSTIC_LOGS[Math.floor(Math.random() * DIAGNOSTIC_LOGS.length)]
+      const now = new Date()
+      const ts = `${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`
       setTerminalLines(prev => {
-        const next = [...prev, `[+${timeSec}.${timeMs}s] ${randomLog}`]
-        // Cap lines aggressively to avoid DOM bloat, though CSS handles overflow
-        if (next.length > 30) return next.slice(next.length - 30)
-        return next
+        const next = [...prev, `[${ts}] ${log}`]
+        return next.length > 25 ? next.slice(-25) : next
       })
-      
       if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+        setTimeout(() => {
+          if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+        }, 50)
       }
-      
-      // Variable speed to look realistic (sometimes batches, sometimes waits)
-      const nextDelay = Math.random() > 0.8 ? 50 : 300 + Math.random() * 500
-      setTimeout(injectLog, nextDelay)
+      setTimeout(injectLog, Math.random() > 0.75 ? 80 : 350 + Math.random() * 450)
     }
-    const termT = setTimeout(injectLog, 300)
+    const termT = setTimeout(injectLog, 400)
 
-    // Progressive Steps logic
+    // Progressive steps
     const advance = () => {
       if (!isSubscribed) return
       setDoneSteps(prev => [...prev, step])
       step++
       if (step < ANALYSIS_STEPS.length) {
         setActiveStep(step)
-        // Simulate real processing times (AI step takes longest)
-        const waitTime = step === 4 ? 4000 + Math.random() * 3000 : 1500 + Math.random() * 1000
-        setTimeout(advance, waitTime)
+        const wait = step === 4 ? 5000 + Math.random() * 3000 : 1800 + Math.random() * 1200
+        setTimeout(advance, wait)
       }
     }
-    // Start step progression
-    const stepT = setTimeout(advance, 1000)
+    const stepT = setTimeout(advance, 1200)
 
     return () => {
       isSubscribed = false
       clearInterval(progT)
+      clearInterval(metricT)
       clearTimeout(termT)
       clearTimeout(stepT)
     }
@@ -107,165 +112,232 @@ export function ScanningOverlay({ visible }: { visible: boolean }) {
 
   if (!visible) return null
 
+  const progressPct = Math.min(progress, 99)
+  const currentLabel = activeStep >= 0 && activeStep < ANALYSIS_STEPS.length
+    ? ANALYSIS_STEPS[activeStep].label
+    : 'Initializing…'
+
   return (
     <div style={{
-      background: 'var(--white)',
-      borderRadius: 16,
-      border: '1px solid var(--border)',
-      boxShadow: '0 8px 30px -10px rgba(0,0,0,0.05)',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1a2744 50%, #0f2033 100%)',
+      borderRadius: 24,
+      border: '1px solid rgba(20,184,166,0.2)',
       overflow: 'hidden',
-      maxWidth: 900,
-      margin: '0 auto',
+      boxShadow: '0 32px 80px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
+      position: 'relative',
     }}>
-      {/* Top Progress Bar */}
-      <div style={{ height: 4, background: 'var(--border)', width: '100%', overflow: 'hidden' }}>
+
+      {/* Ambient glow orbs */}
+      <div style={{ position: 'absolute', top: -60, left: -60, width: 200, height: 200, background: 'radial-gradient(circle, rgba(20,184,166,0.15), transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: -80, right: -40, width: 260, height: 260, background: 'radial-gradient(circle, rgba(99,102,241,0.12), transparent 70%)', pointerEvents: 'none' }} />
+
+      {/* Top progress bar */}
+      <div style={{ height: 3, background: 'rgba(255,255,255,0.07)', width: '100%', overflow: 'hidden' }}>
         <div style={{
           height: '100%',
-          width: `${Math.min(progress, 99)}%`,
-          background: 'linear-gradient(90deg, var(--teal-light), var(--teal))',
-          transition: 'width 0.3s ease-out'
+          width: `${progressPct}%`,
+          background: 'linear-gradient(90deg, #14b8a6, #6366f1)',
+          transition: 'width 0.4s ease-out',
+          boxShadow: '0 0 12px rgba(20,184,166,0.7)',
         }} />
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1.3fr) minmax(0, 1fr)',
-        minHeight: 340, // strict fixed height to prevent stretching
-      }}>
-        
-        {/* Left Side: Pipeline Steps */}
-        <div style={{ padding: '36px 40px', display: 'flex', flexDirection: 'column' }}>
-          
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 28 }}>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--navy)', fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '-0.02em' }}>
-                Generating Diagnostic Audit
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--slate)', marginTop: 4 }}>
-                This process typically takes 15-20 seconds.
-              </div>
-            </div>
-            <div style={{ position: 'relative', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {/* Outer dashed track */}
-              <div style={{ position: 'absolute', inset: 0, border: '2px dashed rgba(20,184,166,0.3)', borderRadius: '50%', animation: 'spin 8s linear infinite' }} />
-              
-              {/* High-speed Teal partial ring */}
-              <div style={{ position: 'absolute', inset: -4, border: '2px solid transparent', borderTopColor: 'var(--teal)', borderBottomColor: 'var(--teal)', borderRadius: '50%', animation: 'spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite' }} />
-              
-              {/* Inner Navy reverse ring */}
-              <div style={{ position: 'absolute', inset: 5, border: '2px solid transparent', borderLeftColor: 'var(--navy)', borderRightColor: 'var(--navy-light)', borderRadius: '50%', animation: 'spin 2s linear infinite reverse' }} />
-              
-              {/* Core reactor */}
-              <div style={{ width: 12, height: 12, background: 'var(--teal)', borderRadius: '50%', animation: 'pulse-glow 1.5s infinite' }} />
-            </div>
+      {/* Header */}
+      <div style={{ padding: '28px 36px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            {/* Pulsing indicator */}
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#14b8a6', boxShadow: '0 0 8px #14b8a6', animation: 'pulse-glow 1.2s infinite' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#5eead4' }}>Live Analysis</span>
           </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#f1f5f9', fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '-0.02em' }}>
+            FairSight Audit Engine
+          </div>
+          <div style={{ fontSize: 13, color: '#64748b', marginTop: 4, fontFamily: 'DM Mono, monospace' }}>
+            {currentLabel}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 36, fontWeight: 800, color: '#f1f5f9', fontFamily: 'DM Mono, monospace', lineHeight: 1 }}>
+            {Math.round(progressPct)}<span style={{ fontSize: 16, color: '#5eead4' }}>%</span>
+          </div>
+          <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>Confidence</div>
+        </div>
+      </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1, justifyContent: 'center' }}>
-            {ANALYSIS_STEPS.map((label, i) => {
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, padding: '24px 36px 32px' }}>
+
+        {/* Left: Pipeline steps */}
+        <div style={{ paddingRight: 28, borderRight: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#475569', marginBottom: 18 }}>
+            Analysis Pipeline
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {ANALYSIS_STEPS.map((step, i) => {
               const isDone = doneSteps.includes(i)
               const isActive = activeStep === i && !isDone
               const isPending = !isDone && !isActive
-
               return (
-                <div key={label} style={{
+                <div key={i} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
-                  opacity: isPending ? 0.4 : 1,
-                  transition: 'opacity 0.3s ease',
+                  opacity: isPending ? 0.3 : 1,
+                  transition: 'opacity 0.4s ease',
                 }}>
-                  {/* Status Indicator */}
+                  {/* Status circle */}
                   <div style={{
-                    width: 20, height: 20, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: isDone ? 'var(--bg)' : isActive ? 'transparent' : 'transparent',
-                    border: isDone ? '1px solid var(--border)' : isActive ? '2px solid var(--teal)' : '1px solid var(--slate-light)',
-                    flexShrink: 0,
-                    position: 'relative'
+                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: isDone
+                      ? 'rgba(20,184,166,0.15)'
+                      : isActive
+                        ? 'transparent'
+                        : 'rgba(255,255,255,0.04)',
+                    border: isDone
+                      ? '1.5px solid #14b8a6'
+                      : isActive
+                        ? '2px solid #14b8a6'
+                        : '1px solid rgba(255,255,255,0.12)',
+                    position: 'relative',
                   }}>
-                    {isDone && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                    {isDone && (
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
                     {isActive && (
                       <div style={{
-                        position: 'absolute', inset: 3, background: 'var(--teal)', borderRadius: '50%',
-                        animation: 'scan-pulse 1.5s ease-in-out infinite'
+                        width: 8, height: 8, borderRadius: '50%', background: '#14b8a6',
+                        boxShadow: '0 0 6px #14b8a6',
+                        animation: 'pulse-glow 1s infinite',
                       }} />
                     )}
                   </div>
-                  
                   <div style={{
-                    fontSize: 13.5,
-                    fontWeight: isActive || isDone ? 600 : 500,
-                    color: isActive ? 'var(--navy)' : isDone ? 'var(--slate)' : 'var(--slate)',
+                    fontSize: 13,
+                    fontWeight: isActive ? 600 : isDone ? 500 : 400,
+                    color: isActive ? '#e2e8f0' : isDone ? '#64748b' : '#475569',
+                    transition: 'color 0.3s',
                   }}>
-                    {label}
+                    {step.label}
                   </div>
                 </div>
               )
             })}
           </div>
+
+          {/* Metric mini-bars */}
+          <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#475569', marginBottom: 14 }}>
+              Computing Metrics
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {METRIC_LABELS.map((label, i) => {
+                const val = metricValues[i] ?? 0
+                const isBad = val > 0.5
+                return (
+                  <div key={label}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: '#475569' }}>{label}</span>
+                      <span style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', color: isBad ? '#f87171' : '#34d399' }}>
+                        {(val * 0.4).toFixed(3)}
+                      </span>
+                    </div>
+                    <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${val * 100}%`,
+                        background: isBad
+                          ? 'linear-gradient(90deg, #ef4444, #f87171)'
+                          : 'linear-gradient(90deg, #14b8a6, #34d399)',
+                        transition: 'width 0.8s ease, background 0.8s ease',
+                        borderRadius: 2,
+                      }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
 
-        {/* Right Side: Professional Telemetry Block */}
-        <div style={{ 
-          background: '#f8fafc', // Light sleek background matching SaaS theme
-          borderLeft: '1px solid var(--border)',
-          padding: '36px 32px',
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <div style={{
-              width: 24, height: 24, borderRadius: 6, background: 'var(--white)', border: '1px solid var(--border)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)'
-            }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+        {/* Right: Terminal */}
+        <div style={{ paddingLeft: 28, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <div style={{ display: 'flex', gap: 5 }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444', opacity: 0.6 }} />
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b', opacity: 0.6 }} />
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e', opacity: 0.6 }} />
             </div>
-            <span style={{ color: 'var(--slate)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#475569', marginLeft: 4 }}>
               System Trace
             </span>
           </div>
 
-          {/* Code Window */}
-          <div 
-            style={{
-              flex: 1,
-              background: 'var(--white)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              padding: 16,
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)',
-              position: 'relative'
-            }}
-          >
-            <div ref={scrollRef} style={{ 
-              flex: 1, 
-              overflowY: 'auto', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: 6,
-              paddingRight: 8 // room for scrollbar
-            }} className="scroll-box">
-              {terminalLines.map((line, idx) => (
+          <div ref={scrollRef} style={{
+            flex: 1,
+            background: 'rgba(0,0,0,0.3)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 10,
+            padding: '14px 16px',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 5,
+            maxHeight: 300,
+            position: 'relative',
+          }}>
+            {terminalLines.length === 0 && (
+              <div style={{ fontSize: 11, color: '#334155', fontFamily: 'DM Mono, monospace' }}>Initializing…</div>
+            )}
+            {terminalLines.map((line, idx) => {
+              const isWarn = line.toLowerCase().includes('warn') || line.toLowerCase().includes('skew') || line.toLowerCase().includes('detected')
+              const isNet = line.toLowerCase().includes('net:') || line.toLowerCase().includes('handshake') || line.toLowerCase().includes('secure')
+              return (
                 <div key={idx} style={{
                   fontFamily: 'DM Mono, monospace',
-                  fontSize: 11.5,
-                  lineHeight: 1.5,
-                  color: 'var(--slate)',
+                  fontSize: 11,
+                  lineHeight: 1.6,
+                  color: isWarn ? '#f59e0b' : isNet ? '#818cf8' : '#475569',
                   wordBreak: 'break-word',
-                  animation: 'fade-up 0.2s ease-out'
                 }}>
-                  {line}
+                  <span style={{ color: '#1e293b', marginRight: 6 }}>{line.match(/\[\d+\.\d+\]/)?.[0] ?? ''}</span>
+                  {line.replace(/\[\d+\.\d+\]\s?/, '')}
                 </div>
-              ))}
+              )
+            })}
+            {/* Cursor blink */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+              <span style={{ fontSize: 11, color: '#14b8a6', fontFamily: 'DM Mono, monospace' }}>▶</span>
+              <div style={{ width: 6, height: 14, background: '#14b8a6', borderRadius: 1, animation: 'pulse-glow 1s infinite' }} />
             </div>
-            
-            {/* Top/Bottom Fade masks to make scrolling look extremely polished */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 16, background: 'linear-gradient(var(--white), transparent)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(transparent, var(--white))', pointerEvents: 'none' }} />
+          </div>
+
+          {/* ETA chip */}
+          <div style={{
+            marginTop: 14,
+            padding: '10px 16px',
+            background: 'rgba(20,184,166,0.08)',
+            border: '1px solid rgba(20,184,166,0.2)',
+            borderRadius: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <span style={{ fontSize: 12, color: '#64748b' }}>Typically completes in</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#5eead4', fontFamily: 'DM Mono, monospace' }}>15–25 sec</span>
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }
