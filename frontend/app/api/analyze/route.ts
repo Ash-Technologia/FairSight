@@ -251,29 +251,40 @@ export async function POST(req: Request) {
     // ── [FEATURE] Enforce Fairness Constitution Rules ──
     let constitutionViolations: any[] = []
     try {
-      const constPath = path.join(process.cwd(), '.fairsight_constitution.json')
-      if (fs.existsSync(constPath)) {
-        const rulesDB = JSON.parse(fs.readFileSync(constPath, 'utf8'))
-        const userRules = rulesDB[uid] || rulesDB['guest'] || []
-        
-        userRules.filter((r: any) => r.active).forEach((rule: any) => {
-          const attrData = byAttribute[rule.attribute]
-          if (attrData) {
-            let violation = false
-            const maxDisp = rule.max_disparity || 0.10
-            if (rule.type === 'demographic_parity_constraint' && attrData.demographic_parity > maxDisp) {
-              violation = true
-            } else if (rule.type === 'equalized_odds_constraint' && attrData.equalized_odds > maxDisp) {
-              violation = true
-            } else if (attrData.max_group_disparity > maxDisp) {
-              violation = true
-            }
-            if (violation) {
-              constitutionViolations.push(rule)
-            }
-          }
-        })
+      const host = req.headers.get('host') || 'localhost:3000'
+      const protocol = host.includes('localhost') ? 'http' : 'https'
+      const rulesUrl = `${protocol}://${host}/api/constitution?uid=${uid}`
+
+      let userRules = []
+      try {
+        const rulesRes = await fetch(rulesUrl)
+        if (rulesRes.ok) userRules = await rulesRes.json()
+      } catch {
+        // Fallback to disk if fetch fails (e.g., during build or dev cold start)
+        const constPath = path.join(process.cwd(), '.fairsight_constitution.json')
+        if (fs.existsSync(constPath)) {
+          const rulesDB = JSON.parse(fs.readFileSync(constPath, 'utf8'))
+          userRules = rulesDB[uid] || rulesDB['guest'] || []
+        }
       }
+
+      userRules.filter((r: any) => r.active).forEach((rule: any) => {
+        const attrData = byAttribute[rule.attribute]
+        if (attrData) {
+          let violation = false
+          const maxDisp = rule.max_disparity || 0.10
+          if (rule.type === 'demographic_parity_constraint' && attrData.demographic_parity > maxDisp) {
+            violation = true
+          } else if (rule.type === 'equalized_odds_constraint' && attrData.equalized_odds > maxDisp) {
+            violation = true
+          } else if (attrData.max_group_disparity > maxDisp) {
+            violation = true
+          }
+          if (violation) {
+            constitutionViolations.push(rule)
+          }
+        }
+      })
     } catch(e) {
       console.error('Failed to enforce constitution:', e)
     }
