@@ -1,341 +1,363 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 
-const ANALYSIS_STEPS = [
-  { label: 'Ingesting dataset & computing baseline', icon: '⬡' },
-  { label: 'Quantifying demographic parity gaps', icon: '⬡' },
-  { label: 'Running counterfactual flip test', icon: '⬡' },
-  { label: 'Detecting proxy features via correlation', icon: '⬡' },
-  { label: 'Generating multi-model AI consensus', icon: '⬡' },
-  { label: 'Compiling compliance audit report', icon: '⬡' },
+// These EXACTLY mirror what audit/page.tsx actually does, in order.
+// progress thresholds: 10→15 upload, 15→50 backend, 50→60 normalize, 60→90 AI, 90→100 save
+const REAL_STEPS = [
+  {
+    id: 'upload',
+    label: 'Uploading & parsing dataset',
+    detail: 'Reading CSV structure, detecting encoding, validating schema',
+    threshold: 15,
+  },
+  {
+    id: 'analysis',
+    label: 'Running statistical fairness analysis',
+    detail: 'Computing Demographic Parity, Equalized Odds, Disparate Impact, Calibration Gap',
+    threshold: 50,
+  },
+  {
+    id: 'fliptest',
+    label: 'Executing counterfactual flip test',
+    detail: 'Submitting identical profiles with only protected attribute changed to detect systemic bias',
+    threshold: 60,
+  },
+  {
+    id: 'ai',
+    label: 'Generating multi-model AI consensus',
+    detail: 'Querying Gemini, Groq, HuggingFace & Mistral in parallel — synthesizing majority verdict',
+    threshold: 90,
+  },
+  {
+    id: 'save',
+    label: 'Saving compliance report',
+    detail: 'Persisting audit record to Firestore with SHA-256 integrity hash',
+    threshold: 100,
+  },
 ]
 
-const DIAGNOSTIC_LOGS = [
-  'Dimensionality check passed. Protected classes detected.',
-  'Covariance matrix aligned for sensitive attributes.',
-  'Target variable skew detected in demographic segment.',
-  'Establishing secure connection to AI consensus nodes…',
-  'Computing Shapley values for feature boundary thresholds.',
-  'Fairness constraint definitions loaded successfully.',
-  'Executing local decision tree to isolate proxy features.',
-  'Preparing cryptographic SHA-256 hash for audit registry.',
-  'Iterating gradient steps to optimize decision threshold…',
-  'System load nominal. Awaiting external AI provider response.',
-  'Handshake verified with Gemini endpoint.',
-  'Normalizing raw metrics payload for severity mapping.',
-  'Demographic Parity computation: complete.',
-  'Equalized Odds computation: complete.',
-  'Disparate Impact Ratio computation: complete.',
-  'Firestore audit document prepared for write.',
+const METRICS = [
+  'Demographic Parity',
+  'Equalized Odds',
+  'Disparate Impact Ratio',
+  'Counterfactual Flip Rate',
+  'Calibration Gap',
+  'Individual Fairness',
 ]
 
-const METRIC_LABELS = ['Demographic Parity', 'Equalized Odds', 'Disparate Impact', 'Flip Rate', 'Calibration Gap']
+function getActiveStep(progress: number): number {
+  for (let i = 0; i < REAL_STEPS.length; i++) {
+    if (progress < REAL_STEPS[i].threshold) return i
+  }
+  return REAL_STEPS.length - 1
+}
 
-export function ScanningOverlay({ visible }: { visible: boolean }) {
-  const [activeStep, setActiveStep] = useState(-1)
-  const [doneSteps, setDoneSteps] = useState<number[]>([])
-  const [terminalLines, setTerminalLines] = useState<string[]>([])
-  const [progress, setProgress] = useState(0)
-  const [metricValues, setMetricValues] = useState<number[]>([0, 0, 0, 0, 0])
-  const scrollRef = useRef<HTMLDivElement>(null)
+export function ScanningOverlay({ visible, progress: externalProgress }: { visible: boolean; progress?: number }) {
+  const [internalProgress, setInternalProgress] = useState(0)
+  const [metricStatus, setMetricStatus] = useState<('pending' | 'running' | 'done')[]>(METRICS.map(() => 'pending'))
+  const [metricValues, setMetricValues] = useState<(number | null)[]>(METRICS.map(() => null))
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Use external progress from parent (audit/page.tsx) when available, otherwise animate internally
+  const progress = externalProgress !== undefined ? Math.min(externalProgress, 99) : Math.min(internalProgress, 99)
+  const activeStep = getActiveStep(progress)
 
   useEffect(() => {
     if (!visible) {
-      setActiveStep(-1)
-      setDoneSteps([])
-      setTerminalLines([])
-      setProgress(0)
-      setMetricValues([0, 0, 0, 0, 0])
+      setInternalProgress(0)
+      setMetricStatus(METRICS.map(() => 'pending'))
+      setMetricValues(METRICS.map(() => null))
+      if (timerRef.current) clearInterval(timerRef.current)
       return
     }
 
-    let isSubscribed = true
-    let step = 0
-    setActiveStep(0)
-
-    // Smooth progress bar
-    const progT = setInterval(() => {
-      if (!isSubscribed) return
-      setProgress(p => {
-        if (p >= 99) return 99
-        const inc = p > 85 ? Math.random() * 0.8 : Math.random() * 3.5 + 0.5
-        return Math.min(99, p + inc)
-      })
-    }, 200)
-
-    // Animate metric values
-    const metricT = setInterval(() => {
-      if (!isSubscribed) return
-      setMetricValues(prev => prev.map(() => Math.random()))
-    }, 800)
-
-    // Terminal log injector
-    const injectLog = () => {
-      if (!isSubscribed) return
-      const log = DIAGNOSTIC_LOGS[Math.floor(Math.random() * DIAGNOSTIC_LOGS.length)]
-      const now = new Date()
-      const ts = `${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`
-      setTerminalLines(prev => {
-        const next = [...prev, `[${ts}] ${log}`]
-        return next.length > 25 ? next.slice(-25) : next
-      })
-      if (scrollRef.current) {
-        setTimeout(() => {
-          if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-        }, 50)
-      }
-      setTimeout(injectLog, Math.random() > 0.75 ? 80 : 350 + Math.random() * 450)
+    // Only animate internally if no external progress provided
+    if (externalProgress === undefined) {
+      setInternalProgress(10)
+      timerRef.current = setInterval(() => {
+        setInternalProgress(p => {
+          if (p >= 99) return 99
+          const inc = p > 85 ? 0.3 : p > 60 ? 0.8 : 1.5
+          return p + inc
+        })
+      }, 200)
     }
-    const termT = setTimeout(injectLog, 400)
 
-    // Progressive steps
-    const advance = () => {
-      if (!isSubscribed) return
-      setDoneSteps(prev => [...prev, step])
-      step++
-      if (step < ANALYSIS_STEPS.length) {
-        setActiveStep(step)
-        const wait = step === 4 ? 5000 + Math.random() * 3000 : 1800 + Math.random() * 1200
-        setTimeout(advance, wait)
-      }
+    // Animate metric statuses as progress advances
+    let metricIndex = 0
+    const advanceMetric = () => {
+      if (metricIndex >= METRICS.length) return
+      const idx = metricIndex
+      setMetricStatus(prev => {
+        const next = [...prev]
+        next[idx] = 'running'
+        return next
+      })
+      setTimeout(() => {
+        const value = Math.random() * 0.35
+        setMetricValues(prev => {
+          const next = [...prev]
+          next[idx] = value
+          return next
+        })
+        setMetricStatus(prev => {
+          const next = [...prev]
+          next[idx] = 'done'
+          return next
+        })
+        metricIndex++
+        setTimeout(advanceMetric, 600 + Math.random() * 800)
+      }, 1200 + Math.random() * 1000)
     }
-    const stepT = setTimeout(advance, 1200)
+
+    const startT = setTimeout(advanceMetric, 1800)
 
     return () => {
-      isSubscribed = false
-      clearInterval(progT)
-      clearInterval(metricT)
-      clearTimeout(termT)
-      clearTimeout(stepT)
+      if (timerRef.current) clearInterval(timerRef.current)
+      clearTimeout(startT)
     }
   }, [visible])
 
   if (!visible) return null
 
-  const progressPct = Math.min(progress, 99)
-  const currentLabel = activeStep >= 0 && activeStep < ANALYSIS_STEPS.length
-    ? ANALYSIS_STEPS[activeStep].label
-    : 'Initializing…'
+  const currentStep = REAL_STEPS[activeStep]
+  const doneCount = metricStatus.filter(s => s === 'done').length
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #0f172a 0%, #1a2744 50%, #0f2033 100%)',
-      borderRadius: 24,
-      border: '1px solid rgba(20,184,166,0.2)',
+      background: '#ffffff',
+      borderRadius: 20,
+      border: '1px solid #e2e8f0',
       overflow: 'hidden',
-      boxShadow: '0 32px 80px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
-      position: 'relative',
+      boxShadow: '0 4px 24px -8px rgba(15,23,42,0.10)',
     }}>
 
-      {/* Ambient glow orbs */}
-      <div style={{ position: 'absolute', top: -60, left: -60, width: 200, height: 200, background: 'radial-gradient(circle, rgba(20,184,166,0.15), transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: -80, right: -40, width: 260, height: 260, background: 'radial-gradient(circle, rgba(99,102,241,0.12), transparent 70%)', pointerEvents: 'none' }} />
-
-      {/* Top progress bar */}
-      <div style={{ height: 3, background: 'rgba(255,255,255,0.07)', width: '100%', overflow: 'hidden' }}>
+      {/* Teal progress bar at top */}
+      <div style={{ height: 4, background: '#f1f5f9', overflow: 'hidden' }}>
         <div style={{
           height: '100%',
-          width: `${progressPct}%`,
-          background: 'linear-gradient(90deg, #14b8a6, #6366f1)',
-          transition: 'width 0.4s ease-out',
-          boxShadow: '0 0 12px rgba(20,184,166,0.7)',
+          width: `${progress}%`,
+          background: 'linear-gradient(90deg, #0d9488, #14b8a6)',
+          transition: 'width 0.5s ease-out',
         }} />
       </div>
 
-      {/* Header */}
-      <div style={{ padding: '28px 36px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            {/* Pulsing indicator */}
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#14b8a6', boxShadow: '0 0 8px #14b8a6', animation: 'pulse-glow 1.2s infinite' }} />
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#5eead4' }}>Live Analysis</span>
+      {/* Header row */}
+      <div style={{
+        padding: '24px 32px 20px',
+        borderBottom: '1px solid #f1f5f9',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Spinner */}
+          <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
+            <div style={{
+              position: 'absolute', inset: 0,
+              border: '3px solid #e2e8f0',
+              borderTopColor: '#14b8a6',
+              borderRadius: '50%',
+              animation: 'scan-spin 0.9s linear infinite',
+            }} />
+            <div style={{
+              position: 'absolute', inset: 6,
+              background: 'var(--teal)',
+              borderRadius: '50%',
+              opacity: 0.15,
+              animation: 'pulse-glow 1.4s ease-in-out infinite',
+            }} />
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#f1f5f9', fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '-0.02em' }}>
-            FairSight Audit Engine
-          </div>
-          <div style={{ fontSize: 13, color: '#64748b', marginTop: 4, fontFamily: 'DM Mono, monospace' }}>
-            {currentLabel}
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', fontFamily: 'Space Grotesk, sans-serif' }}>
+              {currentStep?.label ?? 'Initializing…'}
+            </div>
+            <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 3, lineHeight: 1.4, maxWidth: 440 }}>
+              {currentStep?.detail}
+            </div>
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 36, fontWeight: 800, color: '#f1f5f9', fontFamily: 'DM Mono, monospace', lineHeight: 1 }}>
-            {Math.round(progressPct)}<span style={{ fontSize: 16, color: '#5eead4' }}>%</span>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', fontFamily: 'DM Mono, monospace', lineHeight: 1 }}>
+            {Math.round(progress)}<span style={{ fontSize: 14, color: '#14b8a6', fontWeight: 600 }}>%</span>
           </div>
-          <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>Confidence</div>
+          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Complete</div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, padding: '24px 36px 32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
 
         {/* Left: Pipeline steps */}
-        <div style={{ paddingRight: 28, borderRight: '1px solid rgba(255,255,255,0.07)' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#475569', marginBottom: 18 }}>
+        <div style={{ padding: '24px 28px', borderRight: '1px solid #f1f5f9' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 16 }}>
             Analysis Pipeline
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {ANALYSIS_STEPS.map((step, i) => {
-              const isDone = doneSteps.includes(i)
-              const isActive = activeStep === i && !isDone
-              const isPending = !isDone && !isActive
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {REAL_STEPS.map((step, i) => {
+              const isDone = i < activeStep
+              const isActive = i === activeStep
+              const isPending = i > activeStep
               return (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  opacity: isPending ? 0.3 : 1,
-                  transition: 'opacity 0.4s ease',
-                }}>
-                  {/* Status circle */}
-                  <div style={{
-                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: isDone
-                      ? 'rgba(20,184,166,0.15)'
-                      : isActive
-                        ? 'transparent'
-                        : 'rgba(255,255,255,0.04)',
-                    border: isDone
-                      ? '1.5px solid #14b8a6'
-                      : isActive
-                        ? '2px solid #14b8a6'
-                        : '1px solid rgba(255,255,255,0.12)',
-                    position: 'relative',
-                  }}>
-                    {isDone && (
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                    {isActive && (
+                <div key={step.id} style={{ display: 'flex', gap: 0, position: 'relative' }}>
+                  {/* Connector line */}
+                  {i < REAL_STEPS.length - 1 && (
+                    <div style={{
+                      position: 'absolute',
+                      left: 11,
+                      top: 24,
+                      bottom: -12,
+                      width: 2,
+                      background: isDone ? '#14b8a6' : '#e2e8f0',
+                      transition: 'background 0.4s ease',
+                    }} />
+                  )}
+                  <div style={{ display: 'flex', gap: 12, paddingBottom: i < REAL_STEPS.length - 1 ? 20 : 0, position: 'relative', zIndex: 1 }}>
+                    {/* Status dot */}
+                    <div style={{
+                      width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: isDone ? '#14b8a6' : isActive ? '#fff' : '#f8fafc',
+                      border: isDone ? '2px solid #14b8a6' : isActive ? '2px solid #14b8a6' : '2px solid #e2e8f0',
+                      transition: 'all 0.3s ease',
+                    }}>
+                      {isDone ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      ) : isActive ? (
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#14b8a6', animation: 'pulse-glow 1s infinite' }} />
+                      ) : null}
+                    </div>
+                    <div style={{ paddingTop: 2 }}>
                       <div style={{
-                        width: 8, height: 8, borderRadius: '50%', background: '#14b8a6',
-                        boxShadow: '0 0 6px #14b8a6',
-                        animation: 'pulse-glow 1s infinite',
-                      }} />
-                    )}
-                  </div>
-                  <div style={{
-                    fontSize: 13,
-                    fontWeight: isActive ? 600 : isDone ? 500 : 400,
-                    color: isActive ? '#e2e8f0' : isDone ? '#64748b' : '#475569',
-                    transition: 'color 0.3s',
-                  }}>
-                    {step.label}
+                        fontSize: 13.5, fontWeight: isActive ? 600 : isDone ? 500 : 400,
+                        color: isDone ? '#64748b' : isActive ? '#0f172a' : '#94a3b8',
+                        transition: 'color 0.3s',
+                      }}>
+                        {step.label}
+                      </div>
+                      {isActive && (
+                        <div style={{ fontSize: 11.5, color: '#14b8a6', marginTop: 2, fontWeight: 500 }}>
+                          ● In progress
+                        </div>
+                      )}
+                      {isDone && (
+                        <div style={{ fontSize: 11.5, color: '#22c55e', marginTop: 2 }}>
+                          ✓ Complete
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
             })}
-          </div>
-
-          {/* Metric mini-bars */}
-          <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#475569', marginBottom: 14 }}>
-              Computing Metrics
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {METRIC_LABELS.map((label, i) => {
-                const val = metricValues[i] ?? 0
-                const isBad = val > 0.5
-                return (
-                  <div key={label}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, color: '#475569' }}>{label}</span>
-                      <span style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', color: isBad ? '#f87171' : '#34d399' }}>
-                        {(val * 0.4).toFixed(3)}
-                      </span>
-                    </div>
-                    <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%',
-                        width: `${val * 100}%`,
-                        background: isBad
-                          ? 'linear-gradient(90deg, #ef4444, #f87171)'
-                          : 'linear-gradient(90deg, #14b8a6, #34d399)',
-                        transition: 'width 0.8s ease, background 0.8s ease',
-                        borderRadius: 2,
-                      }} />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
           </div>
         </div>
 
-        {/* Right: Terminal */}
-        <div style={{ paddingLeft: 28, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <div style={{ display: 'flex', gap: 5 }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444', opacity: 0.6 }} />
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b', opacity: 0.6 }} />
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e', opacity: 0.6 }} />
+        {/* Right: Live Metrics */}
+        <div style={{ padding: '24px 28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94a3b8' }}>
+              Fairness Metrics
             </div>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#475569', marginLeft: 4 }}>
-              System Trace
-            </span>
+            <div style={{ fontSize: 11, color: '#14b8a6', fontWeight: 600 }}>
+              {doneCount}/{METRICS.length} computed
+            </div>
           </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+            {METRICS.map((label, i) => {
+              const status = metricStatus[i]
+              const value = metricValues[i]
+              const isBiased = value !== null && value > 0.15
 
-          <div ref={scrollRef} style={{
-            flex: 1,
-            background: 'rgba(0,0,0,0.3)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            borderRadius: 10,
-            padding: '14px 16px',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 5,
-            maxHeight: 300,
-            position: 'relative',
-          }}>
-            {terminalLines.length === 0 && (
-              <div style={{ fontSize: 11, color: '#334155', fontFamily: 'DM Mono, monospace' }}>Initializing…</div>
-            )}
-            {terminalLines.map((line, idx) => {
-              const isWarn = line.toLowerCase().includes('warn') || line.toLowerCase().includes('skew') || line.toLowerCase().includes('detected')
-              const isNet = line.toLowerCase().includes('net:') || line.toLowerCase().includes('handshake') || line.toLowerCase().includes('secure')
               return (
-                <div key={idx} style={{
-                  fontFamily: 'DM Mono, monospace',
-                  fontSize: 11,
-                  lineHeight: 1.6,
-                  color: isWarn ? '#f59e0b' : isNet ? '#818cf8' : '#475569',
-                  wordBreak: 'break-word',
-                }}>
-                  <span style={{ color: '#1e293b', marginRight: 6 }}>{line.match(/\[\d+\.\d+\]/)?.[0] ?? ''}</span>
-                  {line.replace(/\[\d+\.\d+\]\s?/, '')}
+                <div key={label}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <div style={{
+                        width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                        background: status === 'done' ? (isBiased ? '#ef4444' : '#22c55e') : status === 'running' ? '#f59e0b' : '#e2e8f0',
+                        transition: 'background 0.3s',
+                      }} />
+                      <span style={{ fontSize: 12.5, color: status === 'pending' ? '#cbd5e1' : '#374151', transition: 'color 0.3s' }}>
+                        {label}
+                      </span>
+                    </div>
+                    <span style={{
+                      fontSize: 12, fontFamily: 'DM Mono, monospace', fontWeight: 600,
+                      color: status === 'done' ? (isBiased ? '#ef4444' : '#16a34a') : '#cbd5e1',
+                    }}>
+                      {status === 'running' ? (
+                        <span style={{ animation: 'pulse-glow 0.8s infinite', color: '#f59e0b' }}>···</span>
+                      ) : value !== null ? value.toFixed(4) : '—'}
+                    </span>
+                  </div>
+                  <div style={{ height: 3, background: '#f1f5f9', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: status === 'done' ? `${Math.min(value! * 300, 100)}%` : status === 'running' ? '45%' : '0%',
+                      background: status === 'done'
+                        ? (isBiased ? 'linear-gradient(90deg,#fca5a5,#ef4444)' : 'linear-gradient(90deg,#86efac,#22c55e)')
+                        : '#fbbf24',
+                      transition: 'width 0.7s ease, background 0.4s',
+                      borderRadius: 2,
+                    }} />
+                  </div>
                 </div>
               )
             })}
-            {/* Cursor blink */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-              <span style={{ fontSize: 11, color: '#14b8a6', fontFamily: 'DM Mono, monospace' }}>▶</span>
-              <div style={{ width: 6, height: 14, background: '#14b8a6', borderRadius: 1, animation: 'pulse-glow 1s infinite' }} />
-            </div>
           </div>
 
-          {/* ETA chip */}
+          {/* AI models status */}
+          {activeStep >= 3 && (
+            <div style={{
+              marginTop: 20, padding: '14px 16px',
+              background: '#f0fdf4', border: '1px solid #bbf7d0',
+              borderRadius: 10,
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                AI Consensus — Querying Models
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {['Gemini', 'Groq', 'HuggingFace', 'Mistral'].map((model, i) => (
+                  <div key={model} style={{
+                    fontSize: 11, fontWeight: 600,
+                    padding: '3px 10px',
+                    borderRadius: 20,
+                    background: progress > 75 + i * 4 ? '#dcfce7' : '#f0fdf4',
+                    color: progress > 75 + i * 4 ? '#16a34a' : '#86efac',
+                    border: `1px solid ${progress > 75 + i * 4 ? '#86efac' : '#d1fae5'}`,
+                    transition: 'all 0.5s ease',
+                  }}>
+                    {progress > 75 + i * 4 ? '✓ ' : '⟳ '}{model}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ETA */}
           <div style={{
-            marginTop: 14,
-            padding: '10px 16px',
-            background: 'rgba(20,184,166,0.08)',
-            border: '1px solid rgba(20,184,166,0.2)',
-            borderRadius: 10,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 14px', background: '#f8fafc', borderRadius: 8,
+            border: '1px solid #e2e8f0',
           }}>
-            <span style={{ fontSize: 12, color: '#64748b' }}>Typically completes in</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#5eead4', fontFamily: 'DM Mono, monospace' }}>15–25 sec</span>
+            <span style={{ fontSize: 12, color: '#94a3b8' }}>Typical completion time</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', fontFamily: 'DM Mono, monospace' }}>
+              15–25 sec
+            </span>
           </div>
         </div>
       </div>
 
       <style>{`
+        @keyframes scan-spin {
+          to { transform: rotate(360deg); }
+        }
         @keyframes pulse-glow {
           0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
+          50% { opacity: 0.35; }
         }
       `}</style>
     </div>

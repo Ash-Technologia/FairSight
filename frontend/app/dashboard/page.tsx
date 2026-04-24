@@ -313,7 +313,7 @@ export default function Dashboard() {
     const pollInterval = setInterval(fetchMonitorData, 12000)
 
     // Live WebSocket for instant refresh
-    const wsUrl = `${(process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000').replace('http', 'ws')}/monitor/live`
+    const wsUrl = `${(process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000').replace('https://', 'wss://').replace('http://', 'ws://')}/monitor/live`
     let ws: WebSocket | null = null
     try {
       ws = new WebSocket(wsUrl)

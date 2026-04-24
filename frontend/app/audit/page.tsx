@@ -340,7 +340,7 @@ export default function AuditPage() {
       {/* Progress */}
       {(state === 'uploading' || state === 'analyzing') && (
         <div className="fade-up" style={{ marginTop: 32 }}>
-          <ScanningOverlay visible={true} />
+          <ScanningOverlay visible={true} progress={progress} />
         </div>
       )}
 

@@ -64,36 +64,35 @@ async def analyze_dataset(
 
     available_cols = df.columns.tolist()
 
+    # ── Auto-detect target column if default not in CSV ──────────────────────
+    # Default 'predicted_label'/'true_label' rarely exist in real-world CSVs.
+    # Scan for likely candidates instead of returning 400.
+    if target_column not in available_cols:
+        candidate_keywords = ['predict', 'label', 'outcome', 'decision', 'result', 'score', 'output', 'class', 'target']
+        candidates = [c for c in available_cols if any(k in c.lower() for k in candidate_keywords)]
+        if candidates:
+            target_column = candidates[0]
+        else:
+            # Last column is a common convention for target in ML datasets
+            target_column = available_cols[-1]
+
+    if label_column not in available_cols:
+        # Use target column as label if separate ground truth not provided
+        label_column = target_column
+
     valid_protected = [c for c in protected_cols if c in available_cols]
 
+    # Auto-detect protected columns when none from the request match the CSV
+    if not valid_protected:
+        demo_keywords = ["race", "gender", "sex", "age", "ethnicity", "nationality", "religion", "disability"]
+        valid_protected = [c for c in available_cols if any(k in c.lower() for k in demo_keywords)]
+
+    # These must run AFTER column detection
     dataset_hash = hash_dataset(content)
     pii_result = detect_pii(df)
 
-    if target_column not in available_cols:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Prediction column '{target_column}' not found"
-        )
-
-    if label_column not in available_cols:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Label column '{label_column}' not found"
-        )
-
-    if not valid_protected:
-        demo_keywords = ["race", "gender", "sex", "age", "ethnicity"]
-        valid_protected = [
-            c for c in available_cols
-            if any(k in c.lower() for k in demo_keywords)
-        ]
-
     # Run flip test first so its overall_flip_rate feeds into the fairness score.
-    flip_result = run_flip_test(
-        df,
-        valid_protected,
-        target_column
-    )
+    flip_result = run_flip_test(df, valid_protected, target_column)
     overall_flip_rate = flip_result.get("overall_flip_rate", 0.0)
 
     metrics = run_bias_analysis(
