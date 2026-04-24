@@ -9,7 +9,7 @@ import { IntersectionalRadar } from '@/components/IntersectionalRadar'
 import { AutoMitigationPanel } from '@/components/AutoMitigationPanel'
 import { IndustryBenchmark } from '@/components/IndustryBenchmark'
 import { AuditRecord } from '@/lib/types'
-import { Download, ArrowLeft, AlertTriangle, Copy, Check, Shield } from 'lucide-react'
+import { Download, ArrowLeft, AlertTriangle, Copy, Check, Shield, Share2 } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import { MitigationSandbox } from '@/components/MitigationSandbox'
 import { DetailedAuditReport } from '@/components/DetailedAuditReport'
@@ -79,8 +79,22 @@ export default function AuditReport({ params }: { params: { id: string } }) {
   }, [])
   const [exporting, setExporting] = useState(false)
   const [hashCopied, setHashCopied] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
+  const [gdprCompliant, setGdprCompliant] = useState<boolean | null>(null)
   const reportRef = useRef<HTMLDivElement>(null)
   const { showToast } = useToast()
+
+  // Validate against constitution for GDPR badge
+  useEffect(() => {
+    if (audit) {
+      fetch(`/api/constitution/validate?uid=${audit.uid ?? 'guest'}&audit_id=${audit.id}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data && typeof data.compliant === 'boolean') setGdprCompliant(data.compliant)
+        })
+        .catch(() => {})
+    }
+  }, [audit])
 
   useEffect(() => {
     localStorage.setItem('fairsight_board_mode', JSON.stringify(boardMode))
@@ -107,6 +121,14 @@ export default function AuditReport({ params }: { params: { id: string } }) {
       setHashCopied(true)
       showToast('Hash copied to clipboard', 'success')
       setTimeout(() => setHashCopied(false), 2000)
+    })
+  }
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setLinkCopied(true)
+      showToast('Public link copied to clipboard', 'success')
+      setTimeout(() => setLinkCopied(false), 2000)
     })
   }
 
@@ -298,6 +320,10 @@ export default function AuditReport({ params }: { params: { id: string } }) {
         <button onClick={exportJSON} className="btn btn-outline" style={{ padding: '10px 16px', fontSize: 13, gap: 8 }}>
           <Download size={14} /> Raw JSON
         </button>
+        <button onClick={handleShare} className="btn btn-outline" style={{ padding: '10px 16px', fontSize: 13, gap: 8 }}>
+          {linkCopied ? <Check size={14} color="#22c55e" /> : <Share2 size={14} />}
+          {linkCopied ? 'Copied!' : 'Share Link'}
+        </button>
         <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
         <button
           onClick={() => setBoardMode(!boardMode)}
@@ -336,6 +362,20 @@ export default function AuditReport({ params }: { params: { id: string } }) {
                 border: '1px solid var(--border)',
               }}>
                 Confidence: {Math.round((audit as any).confidenceLevel * 100)}%
+              </span>
+            )}
+            {/* [FEATURE] GDPR Compliance Badge */}
+            {gdprCompliant !== null && (
+              <span style={{
+                fontSize: 11, fontWeight: 800, letterSpacing: '0.05em',
+                padding: '4px 10px', borderRadius: 6,
+                background: gdprCompliant ? '#f0fdf4' : '#fef2f2',
+                color: gdprCompliant ? '#15803d' : '#dc2626',
+                border: `1px solid ${gdprCompliant ? '#bbf7d0' : '#fca5a5'}`,
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+              }}>
+                <Shield size={12} fill="currentColor" color={gdprCompliant ? '#f0fdf4' : '#fef2f2'} />
+                {gdprCompliant ? 'GDPR / AI ACT COMPLIANT' : 'GDPR / AI ACT VIOLATION'}
               </span>
             )}
           </div>

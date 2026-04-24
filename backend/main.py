@@ -5,7 +5,7 @@ import os
 
 load_dotenv()
 
-from routers import analyze, monitor, sdk, events, simulate, settings, mitigate, preflight, benchmark, firewall, report, debias, cicd
+from routers import analyze, monitor, sdk, events, simulate, settings, mitigate, preflight, benchmark, firewall, report, debias, cicd, stream_analyze
 
 app = FastAPI(
     title="FairSight API",
@@ -43,6 +43,7 @@ app.add_middleware(
 )
 
 app.include_router(analyze.router, prefix="/analyze", tags=["Analysis"])
+app.include_router(stream_analyze.router, prefix="/analyze", tags=["Analysis-Stream"])
 app.include_router(monitor.router, prefix="/monitor", tags=["Monitor"])
 app.include_router(sdk.router, prefix="/sdk", tags=["SDK"])
 app.include_router(events.router, tags=["Events"])

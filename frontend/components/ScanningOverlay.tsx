@@ -45,6 +45,14 @@ const METRICS = [
   'Individual Fairness',
 ]
 
+interface StreamStep {
+  step: string
+  label: string
+  detail: string
+  progress: number
+  [key: string]: any
+}
+
 function getActiveStep(progress: number): number {
   for (let i = 0; i < REAL_STEPS.length; i++) {
     if (progress < REAL_STEPS[i].threshold) return i
@@ -52,7 +60,15 @@ function getActiveStep(progress: number): number {
   return REAL_STEPS.length - 1
 }
 
-export function ScanningOverlay({ visible, progress: externalProgress }: { visible: boolean; progress?: number }) {
+export function ScanningOverlay({
+  visible,
+  progress: externalProgress,
+  currentStep,
+}: {
+  visible: boolean
+  progress?: number
+  currentStep?: StreamStep | null
+}) {
   const [internalProgress, setInternalProgress] = useState(0)
   const [metricStatus, setMetricStatus] = useState<('pending' | 'running' | 'done')[]>(METRICS.map(() => 'pending'))
   const [metricValues, setMetricValues] = useState<(number | null)[]>(METRICS.map(() => null))
@@ -120,7 +136,11 @@ export function ScanningOverlay({ visible, progress: externalProgress }: { visib
 
   if (!visible) return null
 
-  const currentStep = REAL_STEPS[activeStep]
+  const pipelineStep = REAL_STEPS[activeStep]
+  // When SSE currentStep prop is available, use its label/detail for precision;
+  // otherwise fall back to the threshold-based step label
+  const displayLabel = currentStep?.label ?? pipelineStep?.label ?? 'Initializing…'
+  const displayDetail = currentStep?.detail ?? pipelineStep?.detail ?? ''
   const doneCount = metricStatus.filter(s => s === 'done').length
 
   return (
@@ -171,10 +191,10 @@ export function ScanningOverlay({ visible, progress: externalProgress }: { visib
           </div>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', fontFamily: 'Space Grotesk, sans-serif' }}>
-              {currentStep?.label ?? 'Initializing…'}
+              {displayLabel}
             </div>
             <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 3, lineHeight: 1.4, maxWidth: 440 }}>
-              {currentStep?.detail}
+              {displayDetail}
             </div>
           </div>
         </div>

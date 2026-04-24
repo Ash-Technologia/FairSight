@@ -1,144 +1,85 @@
 // frontend/app/api/constitution/validate/route.ts
-//
-// POST /api/constitution/validate
-// Body: { uid: string, auditId?: string, byAttribute: Record<string, any>, fairnessScore: number, verdict: string }
-//
-// Runs the user's active FairSight Constitution rules against an audit result.
-// If a rule is violated:
-//   - CLEAR  → downgraded to BORDERLINE (constitution rule violated)
-//   - GUILTY → severity may be escalated
-// Returns the violation list and an updated verdict + severity.
-//
-// This makes the Constitution page directly affect audit outcomes — it's
-// otherwise decorative.
-
+import { NextRequest } from 'next/server'
+import { adminDb } from '@/lib/firebaseAdmin'
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 
-const CONST_PATH = path.join(process.cwd(), '.fairsight_constitution.json')
+export async function GET(req: NextRequest) {
+  const uid = req.nextUrl.searchParams.get('uid') ?? 'guest'
+  const audit_id = req.nextUrl.searchParams.get('audit_id')
+  
+  if (!audit_id) return Response.json({ error: 'audit_id required' }, { status: 400 })
 
-function loadRules(uid: string): any[] {
   try {
-    if (!fs.existsSync(CONST_PATH)) return []
-    const db = JSON.parse(fs.readFileSync(CONST_PATH, 'utf8'))
-    return db[uid] || db['guest'] || []
-  } catch {
-    return []
-  }
-}
+    // 1. Fetch Audit
+    const doc = await adminDb.collection('audits').doc(audit_id).get()
+    if (!doc.exists) return Response.json({ error: 'Audit not found' }, { status: 404 })
+    const audit = doc.data()!
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json()
-    const {
-      uid = 'guest',
-      byAttribute = {},
-      fairnessScore = 100,
-      verdict = 'CLEAR',
-      severity = 'LOW',
-    } = body
-
-    const rules: any[] = loadRules(uid).filter((r: any) => r.active)
-
-    if (rules.length === 0) {
-      return Response.json({
-        violations: [],
-        verdict,
-        severity,
-        fairnessScore,
-        constitutionApplied: false,
-        message: 'No active constitution rules found.',
-      })
+    // 2. Fetch Rules from the in-memory endpoint (we must fetch from the local route via HTTP since memory is isolated per file)
+    const host = req.headers.get('host')
+    const protocol = host?.includes('localhost') ? 'http' : 'https'
+    const rulesUrl = `${protocol}://${host}/api/constitution?uid=${uid}`
+    
+    let rules = []
+    try {
+      const rulesRes = await fetch(rulesUrl)
+      if (rulesRes.ok) rules = await rulesRes.json()
+    } catch {
+      // Fallback: try reading the file directly if fetch fails (e.g. during build)
+      try {
+        const CACHE = path.join(process.env.VERCEL ? os.tmpdir() : process.cwd(), '.fairsight_constitution.json')
+        if (fs.existsSync(CACHE)) {
+           const all = JSON.parse(fs.readFileSync(CACHE, 'utf-8'))
+           rules = all[uid] ?? []
+        }
+      } catch {}
     }
 
-    const violations: any[] = []
+    const activeRules = rules.filter((r: any) => r.active)
+    
+    if (!activeRules.length) {
+      return Response.json({ compliant: true, reason: 'No active rules to validate against' })
+    }
 
-    for (const rule of rules) {
-      const attrData = byAttribute[rule.attribute]
-      if (!attrData) continue
+    const metrics = audit.metrics || {}
+    const byAttr = metrics.by_attribute || {}
+    let compliant = true
+    let violations = []
 
-      const maxDisp = rule.max_disparity ?? 0.10
-      let violated = false
-      let actualValue = 0
-      let metricUsed = rule.type
+    for (const rule of activeRules) {
+      const attrData = byAttr[rule.attribute]
+      if (!attrData) continue // Attribute not present in this audit
+
+      let isViolation = false
+      let observed = 0
 
       if (rule.type === 'demographic_parity_constraint') {
-        actualValue = attrData.demographic_parity ?? 0
-        violated = actualValue > maxDisp
-      } else if (rule.type === 'equalized_odds_constraint') {
-        actualValue = attrData.equalized_odds ?? 0
-        violated = actualValue > maxDisp
-      } else if (rule.type === 'disparate_impact_constraint') {
-        actualValue = attrData.disparate_impact_ratio ?? 1.0
-        violated = actualValue < (rule.min_ratio ?? 0.8)
-      } else {
-        // Generic: check max_group_disparity
-        actualValue = attrData.max_group_disparity ?? 0
-        violated = actualValue > maxDisp
-        metricUsed = 'max_group_disparity'
+        observed = attrData.demographic_parity ?? 0
+        if (observed > rule.max_disparity) isViolation = true
+      }
+      else if (rule.type === 'equalized_odds_constraint') {
+        observed = attrData.equalized_odds ?? 0
+        if (observed > rule.max_disparity) isViolation = true
       }
 
-      if (violated) {
+      if (isViolation) {
+        compliant = false
         violations.push({
-          rule_id:         rule.id ?? `rule-${violations.length}`,
-          plain_english:   rule.plain_english,
-          attribute:       rule.attribute,
-          metric:          metricUsed,
-          actual_value:    round4(actualValue),
-          threshold:       maxDisp,
-          severity_if_violated: rule.severity_if_violated ?? 'HIGH',
+          rule_id: rule.rule_id,
+          type: rule.type,
+          attribute: rule.attribute,
+          observed,
+          allowed: rule.max_disparity,
+          severity: rule.severity_if_violated
         })
       }
     }
 
-    // ── Downgrade / escalate verdict ───────────────────────────────────────
-    let updatedVerdict  = verdict
-    let updatedSeverity = severity
+    return Response.json({ compliant, violations })
 
-    if (violations.length > 0) {
-      const maxSev = violations.some(v => v.severity_if_violated === 'CRITICAL') ? 'CRITICAL'
-        : violations.some(v => v.severity_if_violated === 'HIGH') ? 'HIGH'
-        : 'MEDIUM'
-
-      // CLEAR → BORDERLINE when constitution rules are violated
-      if (verdict === 'CLEAR') {
-        updatedVerdict  = 'BORDERLINE'
-        updatedSeverity = maxSev === 'CRITICAL' ? 'HIGH' : 'MEDIUM'
-      }
-
-      // BORDERLINE → GUILTY when CRITICAL constitution violation
-      if (verdict === 'BORDERLINE' && maxSev === 'CRITICAL') {
-        updatedVerdict  = 'GUILTY'
-        updatedSeverity = 'CRITICAL'
-      }
-
-      // GUILTY: escalate severity if constitution says CRITICAL
-      if (verdict === 'GUILTY' && maxSev === 'CRITICAL' && updatedSeverity !== 'CRITICAL') {
-        updatedSeverity = 'CRITICAL'
-      }
-    }
-
-    const summary = violations.length === 0
-      ? 'All active constitution rules passed.'
-      : `${violations.length} constitution rule${violations.length > 1 ? 's' : ''} violated. Verdict downgraded from ${verdict} → ${updatedVerdict}.`
-
-    return Response.json({
-      violations,
-      verdict:            updatedVerdict,
-      severity:           updatedSeverity,
-      fairnessScore,
-      originalVerdict:    verdict,
-      constitutionApplied: true,
-      rulesChecked:       rules.length,
-      violationCount:     violations.length,
-      summary,
-    })
-  } catch (err: any) {
-    console.error('[constitution/validate]', err)
-    return Response.json({ error: err.message }, { status: 500 })
+  } catch (error: any) {
+    return Response.json({ error: error.message }, { status: 500 })
   }
-}
-
-function round4(n: number) {
-  return Math.round(n * 10000) / 10000
 }

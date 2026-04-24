@@ -1,91 +1,126 @@
 // frontend/app/api/constitution/route.ts
+// Constitution rules — in-memory primary store (Vercel-safe) + file fallback for localhost
+
 import { NextRequest } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 
-const CACHE = path.join(process.cwd(), '.fairsight_constitution.json')
+// ── In-memory store (survives across requests in same serverless instance) ──
+const _MEMORY: Record<string, any[]> = {}
 
-function load(): Record<string, any[]> {
-  try { if (fs.existsSync(CACHE)) return JSON.parse(fs.readFileSync(CACHE, 'utf-8')) } catch {}
-  return {}
+const CACHE = (() => {
+  try {
+    // Use writable temp dir on both localhost and Vercel
+    return path.join(
+      process.env.VERCEL ? os.tmpdir() : process.cwd(),
+      '.fairsight_constitution.json'
+    )
+  } catch { return '' }
+})()
+
+function load(uid: string): any[] {
+  // Primary: in-memory
+  if (_MEMORY[uid]) return _MEMORY[uid]
+  // Secondary: disk (localhost)
+  try {
+    if (CACHE && fs.existsSync(CACHE)) {
+      const all = JSON.parse(fs.readFileSync(CACHE, 'utf-8'))
+      // Populate memory from disk on first read
+      Object.assign(_MEMORY, all)
+      return _MEMORY[uid] ?? []
+    }
+  } catch {}
+  return []
 }
-function save(data: Record<string, any[]>) {
-  fs.writeFileSync(CACHE, JSON.stringify(data, null, 2))
+
+function saveAll() {
+  // Always update memory; best-effort write to disk
+  try {
+    if (CACHE) fs.writeFileSync(CACHE, JSON.stringify(_MEMORY, null, 2))
+  } catch {}
 }
 
 export async function GET(req: NextRequest) {
   const uid = req.nextUrl.searchParams.get('uid') ?? 'guest'
-  const all = load()
-  return Response.json(all[uid] ?? [])
+  return Response.json(load(uid))
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { action, uid, rule_text, rule } = body
+  const { action, uid = 'guest', rule_text, rule, rule_id } = body
 
+  // ── TRANSLATE plain English → structured JSON via Gemini ────────────────
   if (action === 'translate') {
-    // Call Gemini to translate plain English to structured JSON
     const GEMINI_KEY = process.env.GOOGLE_GEMINI_API_KEY ?? process.env.GEMINI_API_KEY
     if (!GEMINI_KEY) return Response.json({ error: 'Gemini API key not configured' }, { status: 503 })
 
-    const systemPrompt = `You are a legal-technical translator for AI fairness rules. Convert plain English fairness rules into structured JSON constraints. Output ONLY valid JSON matching this schema exactly:
+    const systemPrompt = `You are a legal-technical translator for AI fairness rules.
+Convert the plain English fairness rule into structured JSON. Output ONLY valid JSON matching this schema exactly:
 {
-  "rule_id": "rule_XXX",
+  "rule_id": "rule_${Date.now()}",
   "type": "demographic_parity_constraint" | "equalized_odds_constraint" | "approval_rate_constraint" | "representation_constraint",
-  "attribute": "string (protected attribute name)",
-  "groups": ["group1", "group2"],
-  "max_disparity": 0.05,
+  "attribute": "<protected attribute name, e.g. gender, race, age>",
+  "groups": ["<group1>", "<group2>"],
+  "max_disparity": <number between 0 and 1>,
   "applies_to": "approval_rate" | "tpr" | "fpr",
-  "plain_english": "original rule text",
-  "severity_if_violated": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  "plain_english": "<the original rule text>",
+  "severity_if_violated": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
+  "gdpr_article": "Art. 22 GDPR" | "EEOC 4/5ths Rule" | "EU AI Act Art. 10" | null
 }
-Return only JSON. No explanation. No markdown.`
+Return ONLY JSON. No explanation. No markdown. No code fences.`
 
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: `${systemPrompt}\n\nRule: ${rule_text}` }] }] }),
-      })
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${systemPrompt}\n\nRule: ${rule_text}` }] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 512, responseMimeType: 'application/json' },
+          }),
+        }
+      )
       const data = await res.json()
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
       const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) throw new Error('No JSON in response')
+      if (!jsonMatch) throw new Error('No JSON in Gemini response')
       const parsed = JSON.parse(jsonMatch[0])
       parsed.rule_id = `rule_${Date.now()}`
       parsed.plain_english = rule_text
+      parsed.active = true
       return Response.json(parsed)
     } catch (e: any) {
       return Response.json({ error: `Translation failed: ${e.message}` }, { status: 500 })
     }
   }
 
+  // ── SAVE ─────────────────────────────────────────────────────────────────
   if (action === 'save') {
-    if (!uid || !rule) return Response.json({ error: 'uid and rule required' }, { status: 400 })
-    const all = load()
-    all[uid] = all[uid] ?? []
-    const exists = all[uid].findIndex((r: any) => r.rule_id === rule.rule_id)
-    if (exists >= 0) all[uid][exists] = rule
-    else all[uid].push({ ...rule, active: true, created_at: new Date().toISOString() })
-    save(all)
-    return Response.json({ status: 'saved' })
+    if (!rule) return Response.json({ error: 'rule required' }, { status: 400 })
+    _MEMORY[uid] = _MEMORY[uid] ?? []
+    const idx = _MEMORY[uid].findIndex((r: any) => r.rule_id === rule.rule_id)
+    const entry = { ...rule, active: true, created_at: rule.created_at ?? new Date().toISOString() }
+    if (idx >= 0) _MEMORY[uid][idx] = entry
+    else _MEMORY[uid].push(entry)
+    saveAll()
+    return Response.json({ status: 'saved', rule: entry })
   }
 
+  // ── TOGGLE ────────────────────────────────────────────────────────────────
   if (action === 'toggle') {
-    const { rule_id } = body
-    const all = load()
-    if (all[uid]) {
-      const r = all[uid].find((r: any) => r.rule_id === rule_id)
-      if (r) r.active = !r.active
-      save(all)
-    }
-    return Response.json({ status: 'toggled' })
+    _MEMORY[uid] = _MEMORY[uid] ?? []
+    const r = _MEMORY[uid].find((r: any) => r.rule_id === rule_id)
+    if (r) r.active = !r.active
+    saveAll()
+    return Response.json({ status: 'toggled', active: r?.active })
   }
 
+  // ── DELETE ────────────────────────────────────────────────────────────────
   if (action === 'delete') {
-    const { rule_id } = body
-    const all = load()
-    if (all[uid]) { all[uid] = all[uid].filter((r: any) => r.rule_id !== rule_id); save(all) }
+    _MEMORY[uid] = (_MEMORY[uid] ?? []).filter((r: any) => r.rule_id !== rule_id)
+    saveAll()
     return Response.json({ status: 'deleted' })
   }
 
