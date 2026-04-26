@@ -207,8 +207,8 @@ function ReuploadComparePanel({ originalScore, originalFilename, originalId }: {
       form.append('file', file)
       // Use the same protected_attributes as the original audit
       form.append('protected_attributes', JSON.stringify(['race', 'gender', 'age']))
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://127.0.0.1:8000'
-      const backendRes = await fetch(`${backendUrl}/analyze/dataset`, { method: 'POST', body: form })
+      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://127.0.0.1:8000').replace(/\/$/, '')
+      const backendRes = await fetch(`${backendUrl}/analyze`, { method: 'POST', body: form })
       if (!backendRes.ok) throw new Error(`Backend ${backendRes.status}`)
       const backendData = await backendRes.json()
 

@@ -547,7 +547,9 @@ export default function AuditReport({ params }: { params: { id: string } }) {
 
       {/* 5. Proxy Features (Heatmap + List) */}
       {!boardMode && (() => {
-        const fi = (audit.metrics as any)?.feature_importance
+        // featureImportance is stored top-level by /api/analyze (featureImportance field)
+        // audit.metrics.feature_importance is a legacy/fallback path
+        const fi = (audit as any).featureImportance ?? (audit.metrics as any)?.feature_importance
         const cm = fi?.correlation_matrix
         if (!cm || Object.keys(cm).length < 2) return null
         return (

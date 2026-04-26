@@ -24,6 +24,9 @@ export default function IntegrationsPage() {
     fetch(`/api/settings?uid=${uid}`)
       .then(r => r.json())
       .then(d => {
+        if (d.slack_url)   setSlackUrl(d.slack_url)
+        if (d.discord_url) setDiscordUrl(d.discord_url)
+        if (d.teams_url)   setTeamsUrl(d.teams_url)
         setThreshold(d.bias_threshold ?? 70)
         setEnabled(d.enabled ?? true)
       })
