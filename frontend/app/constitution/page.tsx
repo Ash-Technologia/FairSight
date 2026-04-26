@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/AuthContext'
 import { useToast } from '@/components/Toast'
-import { Scale, Sparkles, Plus, Trash2, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react'
+import { Scale, Sparkles, Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Edit2, CheckCircle } from 'lucide-react'
 
 const SEVERITY_COLOR: Record<string, string> = {
   LOW: '#22c55e', MEDIUM: '#f59e0b', HIGH: '#ef4444', CRITICAL: '#7c3aed',
@@ -37,6 +37,8 @@ export default function ConstitutionPage() {
   const [translating, setTranslating] = useState(false)
   const [translated, setTranslated] = useState<ConstitutionRule | null>(null)
   const [saving, setSaving] = useState(false)
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null)
+  const [verifyingRuleId, setVerifyingRuleId] = useState<string | null>(null)
 
   const load = () => {
     fetch(`/api/constitution?uid=${uid}`).then(r => r.json()).then(data => {
@@ -69,16 +71,62 @@ export default function ConstitutionPage() {
     if (!translated) return
     setSaving(true)
     try {
+      const payload = { ...translated }
+      if (editingRuleId) payload.rule_id = editingRuleId
+
       await fetch('/api/constitution', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save', uid, rule: translated }),
+        body: JSON.stringify({ action: 'save', uid, rule: payload }),
       })
-      showToast('Rule added to your Constitution!', 'success')
-      setRuleText(''); setTranslated(null)
+      showToast(editingRuleId ? 'Rule updated successfully!' : 'Rule added to your Constitution!', 'success')
+      setRuleText(''); setTranslated(null); setEditingRuleId(null)
       load()
     } catch { showToast('Save failed', 'error') }
     finally { setSaving(false) }
+  }
+
+  const handleEdit = (rule: ConstitutionRule) => {
+    setEditingRuleId(rule.rule_id)
+    setRuleText(rule.plain_english)
+    setTranslated(rule)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleVerifySingle = async (rule: ConstitutionRule) => {
+    setVerifyingRuleId(rule.rule_id)
+    try {
+      const verdictRes = await fetch(`/api/verdict?uid=${uid}`)
+      const verdicts = await verdictRes.json()
+      if (!Array.isArray(verdicts) || verdicts.length === 0) {
+        showToast('No audit found to verify against.', 'error')
+        return
+      }
+      const latest = verdicts.sort((a: any, b: any) => b.createdAt - a.createdAt)[0]
+      const res = await fetch('/api/constitution/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid,
+          byAttribute: latest.byAttribute ?? {},
+          fairnessScore: latest.fairnessScore ?? 100,
+          verdict: latest.verdict ?? 'CLEAR',
+          severity: latest.severity ?? 'LOW',
+        }),
+      })
+      const data = await res.json()
+      // Match by rule_id or plain_english
+      const isViolated = data.violations?.some((v: any) => v.plain_english === rule.plain_english)
+      if (isViolated) {
+        showToast(`Rule Failed: Latest audit violates this rule.`, 'error')
+      } else {
+        showToast(`Rule Passed: Latest audit complies.`, 'success')
+      }
+    } catch (e: any) {
+      showToast(e.message || 'Verification failed', 'error')
+    } finally {
+      setVerifyingRuleId(null)
+    }
   }
 
   const handleToggle = async (rule_id: string) => {
@@ -147,7 +195,7 @@ export default function ConstitutionPage() {
       <div className="card fade-up delay-1" style={{ marginBottom: 24, borderColor: 'rgba(124,58,237,0.2)', background: 'rgba(124,58,237,0.03)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
           <div style={{ padding: 10, background: 'rgba(124,58,237,0.1)', borderRadius: 10 }}><Scale size={20} color="#7c3aed" /></div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Add a New Rule</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{editingRuleId ? 'Modify Rule' : 'Add a New Rule'}</h2>
         </div>
         <textarea
           value={ruleText}
@@ -162,7 +210,12 @@ export default function ConstitutionPage() {
           </button>
           {translated && (
             <button onClick={handleSave} disabled={saving} className="btn" style={{ background: '#7c3aed', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
-              {saving ? <Loader2 size={14} /> : <Plus size={14} />} Add to Constitution
+              {saving ? <Loader2 size={14} /> : (editingRuleId ? <Edit2 size={14} /> : <Plus size={14} />)} {editingRuleId ? 'Update Rule' : 'Add to Constitution'}
+            </button>
+          )}
+          {editingRuleId && (
+            <button onClick={() => { setEditingRuleId(null); setRuleText(''); setTranslated(null) }} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--slate)' }}>
+              Cancel
             </button>
           )}
         </div>
@@ -211,6 +264,12 @@ export default function ConstitutionPage() {
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button onClick={() => handleVerifySingle(rule)} disabled={verifyingRuleId === rule.rule_id} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981' }} title="Verify rule against latest audit">
+                    {verifyingRuleId === rule.rule_id ? <Loader2 size={16} className="spin" /> : <CheckCircle size={16} />}
+                  </button>
+                  <button onClick={() => handleEdit(rule)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6' }} title="Modify rule">
+                    <Edit2 size={16} />
+                  </button>
                   <button onClick={() => handleToggle(rule.rule_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: rule.active ? '#7c3aed' : 'var(--slate)' }} title={rule.active ? 'Deactivate' : 'Activate'}>
                     {rule.active ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
                   </button>

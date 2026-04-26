@@ -50,10 +50,12 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { action, uid = 'guest', rule_text, rule, rule_id } = body
 
-  // ── TRANSLATE plain English → structured JSON via Gemini ────────────────
+  // ── TRANSLATE plain English → structured JSON via Gemini / Groq ─────────
   if (action === 'translate') {
     const GEMINI_KEY = process.env.GOOGLE_GEMINI_API_KEY ?? process.env.GEMINI_API_KEY
-    if (!GEMINI_KEY) return Response.json({ error: 'Gemini API key not configured' }, { status: 503 })
+    const GROQ_KEY = process.env.GROQ_API_KEY
+
+    if (!GEMINI_KEY && !GROQ_KEY) return Response.json({ error: 'No AI API keys configured (Gemini/Groq)' }, { status: 503 })
 
     const systemPrompt = `You are a legal-technical translator for AI fairness rules.
 Convert the plain English fairness rule into structured JSON. Output ONLY valid JSON matching this schema exactly:
@@ -71,22 +73,54 @@ Convert the plain English fairness rule into structured JSON. Output ONLY valid 
 Return ONLY JSON. No explanation. No markdown. No code fences.`
 
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: `${systemPrompt}\n\nRule: ${rule_text}` }] }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 512, responseMimeType: 'application/json' },
-          }),
+      let parsed: any = null
+
+      // Try Gemini First
+      if (GEMINI_KEY) {
+        try {
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: `${systemPrompt}\n\nRule: ${rule_text}` }] }],
+                generationConfig: { temperature: 0.1, maxOutputTokens: 512, responseMimeType: 'application/json' },
+              }),
+            }
+          )
+          const data = await res.json()
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+          const jsonMatch = text.match(/\{[\s\S]*\}/)
+          if (jsonMatch) parsed = JSON.parse(jsonMatch[0])
+        } catch (e) {
+          console.warn("Gemini failed, trying fallback...")
         }
-      )
-      const data = await res.json()
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) throw new Error('No JSON in Gemini response')
-      const parsed = JSON.parse(jsonMatch[0])
+      }
+
+      // Fallback to Groq
+      if (!parsed && GROQ_KEY) {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'llama3-8b-8192',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: `Rule: ${rule_text}` }
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.1
+          })
+        })
+        const data = await res.json()
+        const text = data?.choices?.[0]?.message?.content ?? ''
+        const jsonMatch = text.match(/\{[\s\S]*\}/)
+        if (jsonMatch) parsed = JSON.parse(jsonMatch[0])
+      }
+
+      if (!parsed) throw new Error('All AI providers failed or returned invalid JSON')
+
       parsed.rule_id = `rule_${Date.now()}`
       parsed.plain_english = rule_text
       parsed.active = true
