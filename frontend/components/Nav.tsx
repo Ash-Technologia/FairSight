@@ -50,7 +50,7 @@ export function Nav() {
         { href: '/cicd', label: 'CI/CD Gate', icon: GitBranch },
       ]
     },
-    { label: 'Guide', icon: BookOpen, href: '/guide' },
+    { label: 'About', icon: BookOpen, href: '/about' },
     {
       label: 'Settings', icon: Key,
       items: [

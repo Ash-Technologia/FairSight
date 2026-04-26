@@ -75,51 +75,51 @@ Return ONLY JSON. No explanation. No markdown. No code fences.`
     try {
       let parsed: any = null
 
-      // Try Gemini First
-      if (GEMINI_KEY) {
+      // Try Groq First (Primary, since API key is active and model is fast)
+      if (GROQ_KEY) {
         try {
-          const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{ parts: [{ text: `${systemPrompt}\n\nRule: ${rule_text}` }] }],
-                generationConfig: { temperature: 0.1, maxOutputTokens: 512, responseMimeType: 'application/json' },
-              }),
-            }
-          )
+          const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'llama-3.1-8b-instant',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: `Rule: ${rule_text}` }
+              ],
+              response_format: { type: 'json_object' },
+              temperature: 0.1
+            })
+          })
           const data = await res.json()
-          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+          const text = data?.choices?.[0]?.message?.content ?? ''
           const jsonMatch = text.match(/\{[\s\S]*\}/)
           if (jsonMatch) parsed = JSON.parse(jsonMatch[0])
         } catch (e) {
-          console.warn("Gemini failed, trying fallback...")
+          console.warn("Groq failed, trying fallback...")
         }
       }
 
-      // Fallback to Groq
-      if (!parsed && GROQ_KEY) {
-        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'llama3-8b-8192',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: `Rule: ${rule_text}` }
-            ],
-            response_format: { type: 'json_object' },
-            temperature: 0.1
-          })
-        })
+      // Fallback to Gemini
+      if (!parsed && GEMINI_KEY) {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `${systemPrompt}\n\nRule: ${rule_text}` }] }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 512, responseMimeType: 'application/json' },
+            }),
+          }
+        )
         const data = await res.json()
-        const text = data?.choices?.[0]?.message?.content ?? ''
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
         const jsonMatch = text.match(/\{[\s\S]*\}/)
         if (jsonMatch) parsed = JSON.parse(jsonMatch[0])
       }
 
-      if (!parsed) throw new Error('All AI providers failed or returned invalid JSON')
+      if (!parsed) throw new Error('All AI providers failed or returned invalid JSON (Check API Keys/Quotas)')
 
       parsed.rule_id = `rule_${Date.now()}`
       parsed.plain_english = rule_text

@@ -236,7 +236,7 @@ export default function LandingPage() {
               <Link href="/audit" className="btn btn-teal btn-lg" style={{ fontSize: 17, padding: '18px 40px' }}>
                 Run Free Audit <ArrowRight size={18} />
               </Link>
-              <Link href="/guide" className="btn btn-outline btn-lg" style={{ fontSize: 17, padding: '18px 40px', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}>
+              <Link href="/about" className="btn btn-outline btn-lg" style={{ fontSize: 17, padding: '18px 40px', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}>
                 View Documentation
               </Link>
             </div>
