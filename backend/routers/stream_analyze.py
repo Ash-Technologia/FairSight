@@ -57,6 +57,7 @@ async def analyze_stream(
         raise HTTPException(status_code=413, detail="File too large (max 10 MB)")
 
     async def event_generator():
+        nonlocal target_column, label_column
         try:
             # ── Step 1: Parse dataset ──────────────────────────────────────
             yield sse_event("parse", "Parsing dataset", "Detecting encoding & schema…", 10)
