@@ -103,7 +103,7 @@ export default function AboutPage() {
           textAlign: 'center', 
           marginBottom: 100, 
           padding: '80px 0 60px',
-          transform: \`rotateX(\${mousePosition.y * -0.5}deg) rotateY(\${mousePosition.x * 0.5}deg)\`,
+          transform: `rotateX(${mousePosition.y * -0.5}deg) rotateY(${mousePosition.x * 0.5}deg)`,
           transformStyle: 'preserve-3d',
           transition: 'transform 0.1s ease-out'
         }}>
@@ -330,7 +330,7 @@ export default function AboutPage() {
                 color: '#8b5cf6'
               }
             ].map((mod, i) => (
-              <div key={i} className="card about-3d-card" style={{ background: 'rgba(15,23,42,0.6)', borderLeft: \`4px solid \${mod.color}\`, padding: '30px 40px', backdropFilter: 'blur(10px)' }}>
+              <div key={i} className="card about-3d-card" style={{ background: 'rgba(15,23,42,0.6)', borderLeft: `4px solid ${mod.color}`, padding: '30px 40px', backdropFilter: 'blur(10px)' }}>
                 <h4 className="mono" style={{ fontSize: 18, fontWeight: 800, color: mod.color, marginBottom: 12 }}>{mod.path}</h4>
                 <p style={{ fontSize: 15, color: '#cbd5e1', lineHeight: 1.7, margin: 0 }}>{mod.desc}</p>
               </div>
