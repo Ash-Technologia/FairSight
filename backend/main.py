@@ -13,20 +13,12 @@ app = FastAPI(
     description="Real-time AI bias detection and monitoring platform"
 )
 
-# Build list of allowed origins dynamically
-# In production on Render, ALLOW_ALL_ORIGINS=true or set multiple FRONTEND_URL values
-_frontend_url = os.getenv("FRONTEND_URL", "")
-_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-_allow_all = True
+
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_origins,
-    allow_origin_regex=".*",
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
