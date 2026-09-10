@@ -187,7 +187,7 @@ export async function askGemini(prompt: string, useFallback = false): Promise<an
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
-      model: useFallback ? 'gemini-flash-latest' : 'gemini-2.5-flash',
+      model: useFallback ? 'gemini-1.5-flash' : 'gemini-2.0-flash',
       generationConfig: {
         responseMimeType: 'application/json',
         temperature: 0.1,

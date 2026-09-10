@@ -1,339 +1,193 @@
 # 👁️‍🗨️ FairSight
 
-## Real-Time AI Bias Compliance & Mitigation Layer
+### Real-Time AI Bias Compliance, Mitigation & Firewall Infrastructure
 
 <div align="center">
 
-**Team:** Robo maters
-**Built for:** Google Developer Student Clubs (GDSC) Solution Challenge 2026
+[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-black.svg)](https://nextjs.org)
+[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-2.0%20Flash-4285F4.svg)](https://ai.google.dev)
+[![Google Cloud Run](https://img.shields.io/badge/Google%20Cloud-Cloud%20Run-4285F4.svg)](https://cloud.google.com/run)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-⚖️ Detect • Explain • Fix • Prevent AI Bias — Before It Impacts Real People
+**Team:** Robo maters  
+**Built for:** Google Developer Student Clubs (GDSC) Solution Challenge 2026  
+
+⚖️ **Detect • Explain • Fix • Prevent AI Bias — Before It Impacts Real People**
+
+[**Explore Full Technical Documentation**](./DOCUMENTATION.md) • [**Production Deployment Guide**](./DEPLOYMENT.md)
 
 </div>
 
 ---
 
-# 🚨 Problem Statement: Unbiased AI Decision
+## 🚨 Problem Statement
 
-Modern AI systems increasingly decide:
+Modern machine learning systems increasingly automate high-stakes decisions:
+* **Who gets hired** (resume screening and candidate filtering)
+* **Who gets loans** (credit underwriting and risk assessment)
+* **Who qualifies for insurance** (pricing and policy limits)
+* **Who receives healthcare prioritization** (treatment triage)
 
-* who gets hired
-* who receives loans
-* who qualifies for insurance
-* who receives healthcare prioritization
+However, models trained on historical data frequently inherit and scale **systemic discrimination**. Traditional mitigation approaches ("fairness through blindness") fail because high-dimensional proxies (e.g., ZIP codes, university affiliations) allow models to reconstruct protected identities. 
 
-However, these systems often inherit **historical discrimination embedded inside datasets**, silently scaling unfair decisions across thousands—or millions—of users.
-
-Organizations face:
-
-* regulatory penalties (EU AI Act, EEOC, NYC Local Law 144)
-* reputational risk
-* legal exposure
-* ethical violations
-
-Yet existing fairness tools require complex Python pipelines and ML expertise.
-
-**Compliance teams remain blind to algorithmic risk.**
+Meanwhile, sweeping global regulations (**EU AI Act Article 10**, **US EEOC 80% Rule**, **NYC Local Law 144**, **GDPR Article 22**) impose severe penalties of up to **€35M or 7% of global turnover** for discriminatory AI. Existing fairness libraries are offline research scripts that require specialized ML skills—leaving compliance teams and executives blind to algorithmic risk.
 
 ---
 
-# 🎯 Objective
+## 💡 The Solution: FairSight
 
-Build a clear, accessible platform that enables organizations to:
+**FairSight** is a production-ready **AI Bias Firewall and Continuous Compliance Engine** that sits between ML models and end users. It transforms AI auditing from a retrospective manual task into **real-time, enforceable compliance infrastructure**.
 
-✅ inspect datasets
-✅ detect hidden discrimination
-✅ explain fairness violations
-✅ automatically mitigate bias
-✅ prevent biased decisions before deployment
+```
+[ Prediction Request ] ──► [ Model Inference ] ──► [ FairSight Firewall ]
+                                                             │
+                                        ┌────────────────────┴────────────────────┐
+                                        ▼                                         ▼
+                                   [ ALLOWED ]                              [ BLOCKED ]
+                              Delivered to End User                  Quarantined for Human Review
+                                                                     Slack / Webhook Alert Fired
+```
 
----
-
-# 💡 Our Solution: FairSight
-
-**FairSight** is a production-ready **AI bias firewall and compliance engine** that sits between ML models and end users to detect and prevent discriminatory outcomes in real time.
-
-Instead of requiring auditors to write fairness scripts manually, FairSight provides:
-
-📊 interactive dashboards
-⚖ statistical fairness verification
-🤖 Gemini-powered reasoning
-🛡 runtime decision blocking
-📄 regulator-ready compliance reports
-
-Powered by **Google Gemini 1.5 Flash**, FairSight converts plain-English compliance rules into enforceable mathematical fairness constraints.
-
-Example:
-
-> “Ensure hiring decisions remain gender-neutral across departments”
-
-FairSight automatically translates this into:
-
-* Demographic parity thresholds
-* Equalized odds constraints
-* disparity detection logic
-
-Then monitors predictions live.
+Powered by **Google Gemini 2.0 Flash**, FairSight translates plain-English governance policies into enforceable mathematical fairness constraints, monitors inferences live, and provides automated dataset remediation.
 
 ---
 
-# ✨ Core Features & USPs
+## ✨ Key Features & USPs
 
-## 🛡 Live Fairness Firewall
-
-Intercepts biased predictions **before they reach users**
-
-If flipping protected attributes changes outcomes:
-
-Decision blocked → Sent for review
-
-Prevents real-world harm in production pipelines.
-
----
-
-## 🧠 AI Constitution (Plain-English Compliance Rules)
-
-Write fairness rules like:
-
-Avoid bias across age groups
-
-Gemini converts them into mathematical fairness constraints automatically.
-
-No coding required.
+* 🛡 **Live Fairness Firewall:** Intercepts predictions before they reach users. Runs real-time counterfactual checks; if flipping protected attributes changes the decision boundary, the prediction is quarantined.
+* 🧠 **AI Constitution (Plain-English Rules):** Write compliance rules in natural language (e.g., *"Ensure hiring approval rate across age groups stays within 10%"*). Gemini compiles them into mathematical constraints.
+* 🤖 **Multi-LLM Consensus Reasoning:** Evaluates statistical findings through a quorum of models (**Google Gemini 2.0 Flash**, Groq Llama 3.3-70B, Mistral, and Hugging Face) to eliminate hallucinations and detect dissenting opinions.
+* 📡 **Intersectional Radar:** Analyzes compound discrimination across multi-dimensional attribute intersections (Race × Gender, Age × Income, Location × Education).
+* ✨ **Magic Debiasing Engine:** Automatically rebalances biased training datasets using the **Kamiran & Calders (2012)** reweighing algorithm, exporting a production-ready `debiased_dataset.csv`.
+* 🧾 **One-Click Regulatory Certificates:** Generates regulator-ready PDF compliance audit reports formatted for EU AI Act, EEOC, and NYC Local Law 144 compliance.
+* 🔐 **Zero-Retention Privacy:** Uploaded datasets are parsed in-memory, cryptographically fingerprinted via SHA-256 for provenance, and discarded immediately. Raw PII is never stored.
+* 🚦 **CI/CD Quality Gate:** Halts automated deployments in GitHub Actions if a model falls below organizational fairness thresholds.
 
 ---
 
-## 📡 Intersectional Radar
+## 🏗️ Architecture & Technology Stack
 
-Detects compound discrimination across attributes:
-
-Race × Gender
-Age × Income
-Location × Education
-
-Reveals bias invisible in traditional audits.
-
----
-
-## ✨ Magic Debiasing Engine
-
-Automatically repairs biased datasets using:
-
-Kamiran & Calders reweighing
-
-Exports:
-
-clean_dataset.csv
-
-ready for retraining safer models.
-
----
-
-## 🧾 Compliance Certificate Generator
-
-Generates regulator-ready fairness reports aligned with:
-
-* EU AI Act
-* EEOC audit expectations
-* NYC Local Law 144
-
-One-click export.
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                              FRONTEND                                  │
+│  Next.js 14 (App Router)  │  TypeScript  │  TailwindCSS  │  Recharts   │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ REST / SSE / WebSocket
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                              BACKEND                                   │
+│  FastAPI (Python 3.11)  │  Pandas  │  Scikit-Learn  │  ReportLab (PDF) │
+└───────────────────┬───────────────────────────────────┬────────────────┘
+                    │                                   │
+                    ▼                                   ▼
+┌───────────────────────────────────────┐   ┌────────────────────────────┐
+│      GOOGLE CLOUD INFRASTRUCTURE      │   │     AI REASONING ENGINES   │
+│  • Google Cloud Run (Containers)      │   │  • Google Gemini 2.0 Flash │
+│  • Firebase Authentication            │   │  • Groq (Llama 3.3-70B)    │
+│  • Cloud Firestore (Audit History)    │   │  • Mistral & HuggingFace   │
+└───────────────────────────────────────┘   └────────────────────────────┘
+```
 
 ---
 
-## 🤖 Multi-LLM Consensus Engine
+## 🚀 Live Demo & Deployment
 
-Combines reasoning from:
-
-* Gemini 1.5 Flash
-* Groq inference API
-* Together AI inference layer
-
-to eliminate hallucinations and improve verdict reliability.
-
----
-
-## 🔐 Zero-Retention Privacy Architecture
-
-All uploaded datasets are:
-
-SHA-256 hashed
-analyzed
-discarded immediately
-
-Ensuring strong GDPR-aligned privacy guarantees.
+| Resource | Link | Notes |
+|---|---|---|
+| **🌐 Production Deployment (Cloud Run)** | [Launch FairSight on GCP](https://fairsight-frontend-967859676631.us-central1.run.app/) | Primary Google Cloud Run deployment |
+| **⚡ Backup Deployment (Vercel)** | [Launch FairSight on Vercel](https://fair-sight.vercel.app/) | High-speed global edge deployment |
+| **🎥 Video Walkthrough** | [Watch Demo Video](https://drive.google.com/file/d/134RP0yo_0PEiXXDFHH5u3_eFijMIvMto/view?usp=sharing) | Full feature demonstration & walkthrough |
+| **📘 Technical Architecture** | [Read DOCUMENTATION.md](./DOCUMENTATION.md) | Full mathematical formulas & specifications |
+| **🚢 Deployment Manual** | [Read DEPLOYMENT.md](./DEPLOYMENT.md) | Step-by-step production setup |
 
 ---
 
-# 🏗️ Architecture & Tech Stack
+## 🛠️ Quickstart: Running Locally
 
-## Frontend
-
-* Next.js 14
-* React
-* TailwindCSS
-* Framer Motion
-
-## Backend
-
-* Python
-* FastAPI
-* Pandas
-* Scikit-Learn
-
-## Google Cloud Infrastructure ☁️
-
-* Cloud Run (containerized deployment)
-* Firebase Authentication
-* Firestore database
-
-## AI Models
-
-* Google Gemini 1.5 Flash (primary reasoning engine)
-* Groq inference API
-* Together AI inference layer
-
----
-
-# ⚙️ Platform Architecture
-
-/audit
-Dataset ingestion & fairness scan engine
-
-/audit/[id]
-Interactive bias diagnostics dashboard
-
-/firewall
-Live prediction interception simulator
-
-/sandbox
-Adversarial fairness testing playground
-
-/pipeline
-CI/CD fairness enforcement simulator
-
-/compliance
-Regulatory PDF export engine
-
----
-
-# 🚀 Live Demo Links
-
-## 🌐 Production Deployment (Google Cloud)
-
-⚠ Note: Cloud Run instances may scale down automatically on inactivity and occasionally take time to wake.
-
-👉 https://fairsight-frontend-967859676631.us-central1.run.app/
-
----
-
-## ⚡ Stable Backup Deployment (Vercel Mirror)
-
-Recommended if Cloud Run is slow or unavailable:
-
-👉 https://fair-sight.vercel.app/
-
----
-
-## 🎥 YouTube Demo Walkthrough
-
-Watch the full system demo here:
-
-👉 [https://YOUR_YOUTUBE_DEMO_LINK_HERE](https://drive.google.com/file/d/134RP0yo_0PEiXXDFHH5u3_eFijMIvMto/view?usp=sharing)
-
-
-# 🧪 Example Workflow
-
-Step 1
-
-Upload dataset
-
-predictions.csv
-
-Step 2
-
-FairSight scans:
-
-* demographic parity
-* equalized odds
-* proxy leakage
-* intersectional bias
-
-Step 3
-
-Receive verdict:
-
-CLEAR
-WARNING
-GUILTY
-
-Step 4
-
-Auto-repair dataset
-
-Download:
-
-debiased_dataset.csv
-
-Step 5
-
-Deploy firewall protection
-
-Prevent biased outputs in real time.
-
----
-
-# 🛠 Running Locally
-
-## 1️⃣ Clone repository
-
+### 1. Clone Repository
+```bash
 git clone https://github.com/Ash-Technologia/FairSight.git
 cd FairSight
+```
 
----
-
-## 2️⃣ Start backend
-
+### 2. Start Backend
+```bash
 cd backend
+python -m venv venv
+# On Windows:
+.\venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
+
 pip install -r requirements.txt
-uvicorn main:app --reload
+uvicorn main:app --reload --port 8000
+```
+Backend API docs available at: `http://localhost:8000/docs`
 
----
-
-## 3️⃣ Start frontend
-
-cd frontend
+### 3. Start Frontend
+```bash
+cd ../frontend
 npm install
 npm run dev
-
-App runs at:
-
-http://localhost:3000
+```
+Open your browser at `http://localhost:3000`.
 
 ---
 
-# 🌍 Real-World Impact
+## 🐍 Python SDK: 2-Line Integration
 
-FairSight enables organizations to:
+Wrap existing machine learning models to monitor live predictions in production with zero code changes:
 
-✔ reduce algorithmic discrimination
-✔ prevent regulatory penalties
-✔ deploy trustworthy AI systems
-✔ operationalize Responsible AI policies
-✔ audit models without ML expertise
+```bash
+pip install -e ./sdk
+```
+
+```python
+import pandas as pd
+from fairsight import FairSight
+
+# Wrap your existing model (scikit-learn, XGBoost, PyTorch, etc.)
+fs = FairSight(
+    model=your_trained_model,
+    protected=["race", "gender"],
+    api_key="fs_live_your_key_here",
+    endpoint="http://localhost:8000"
+)
+
+# Predict as usual — telemetry is buffered and monitored in the background
+predictions = fs.predict(X_test)
+```
 
 ---
 
-# 🏆 Why FairSight Matters
+## 🔌 API Summary
 
-As global AI regulations expand, organizations must demonstrate measurable fairness guarantees before deploying automated decision systems.
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/analyze/` | Audits dataset for bias, proxies, and individual disparity |
+| `POST` | `/firewall/intercept` | Real-time counterfactual flip test decision firewall |
+| `GET` | `/firewall/stats` | Aggregate blocked decisions and risk score |
+| `POST` | `/debias/{audit_id}` | Applies Kamiran & Calders reweighing algorithm |
+| `GET` | `/debias/{audit_id}/download` | Downloads debiased balanced dataset |
+| `POST` | `/report/pdf` | Generates regulator-ready PDF compliance certificate |
+| `GET` | `/cicd/gate` | CI/CD deployment blocker gate for automated pipelines |
+| `GET` | `/cicd/badge` | SVG fairness status shield for model registries |
+| `POST` | `/sdk/ingest` | Ingests real-time batched SDK model decisions |
+| `GET` | `/health` | Service health status |
 
-FairSight transforms fairness auditing from:
+---
 
-manual research task
+## 🌍 Real-World Impact
 
-into:
+FairSight empowers organizations to:
+* **Protect Vulnerable Groups:** Eradicate bias in automated decisions before real individuals are denied loans, jobs, or healthcare.
+* **Eliminate Regulatory Penalties:** Comply with the EU AI Act, EEOC Uniform Guidelines, and NYC Local Law 144 proactively.
+* **Bridge Engineering & Compliance:** Provide both deep mathematical APIs for data scientists and natural language governance dashboards for compliance officers.
 
-real-time compliance infrastructure
+---
 
-making AI safer, transparent, and accountable at scale. ⚖️🤖📊
+## 📄 License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

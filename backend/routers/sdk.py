@@ -100,6 +100,12 @@ async def ingest_decisions(payload: IngestPayload):
         if isinstance(d.inputs, dict):
             row = {**d.inputs, "predicted_label": d.predictions[0] if d.predictions else None}
             rows.append(row)
+        elif isinstance(d.inputs, list):
+            preds = d.predictions if isinstance(d.predictions, list) else [d.predictions]
+            for idx, item in enumerate(d.inputs):
+                if isinstance(item, dict):
+                    pred_val = preds[idx] if idx < len(preds) else (preds[0] if preds else None)
+                    rows.append({**item, "predicted_label": pred_val})
 
     metrics = None
     if rows:
