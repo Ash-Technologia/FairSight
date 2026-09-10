@@ -1,0 +1,453 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>FairSight — Project Documentation & Technical Dossier</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.6;
+    margin: 40px;
+    background-color: #ffffff;
+  }
+  .cover {
+    text-align: center;
+    padding: 60px 20px;
+    border-bottom: 3px solid #3b82f6;
+    margin-bottom: 50px;
+  }
+  .title {
+    font-size: 36pt;
+    font-weight: 800;
+    color: #1e3a8a;
+    margin-bottom: 10px;
+  }
+  .subtitle {
+    font-size: 18pt;
+    color: #475569;
+    margin-bottom: 25px;
+    font-weight: 500;
+  }
+  .badge-container {
+    margin: 20px 0;
+  }
+  .badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 11pt;
+    font-weight: 600;
+    margin: 0 5px;
+  }
+  .badge-blue { background-color: #dbeafe; color: #1e40af; }
+  .badge-green { background-color: #dcfce7; color: #166534; }
+  .badge-purple { background-color: #f3e8ff; color: #6b21a8; }
+  
+  .meta-table {
+    width: 80%;
+    margin: 30px auto;
+    border-collapse: collapse;
+    text-align: left;
+  }
+  .meta-table td {
+    padding: 10px 15px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 11pt;
+  }
+  .meta-label {
+    font-weight: bold;
+    color: #334155;
+    width: 35%;
+  }
+
+  h1 {
+    font-size: 20pt;
+    color: #1e3a8a;
+    border-bottom: 2px solid #93c5fd;
+    padding-bottom: 8px;
+    margin-top: 40px;
+  }
+  h2 {
+    font-size: 15pt;
+    color: #2563eb;
+    margin-top: 25px;
+  }
+  h3 {
+    font-size: 12pt;
+    color: #0f172a;
+    margin-top: 15px;
+  }
+  p, li {
+    font-size: 11pt;
+    color: #334155;
+  }
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+  }
+  table.data-table th {
+    background-color: #1e40af;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 10.5pt;
+  }
+  table.data-table td {
+    padding: 9px 12px;
+    border: 1px solid #cbd5e1;
+    font-size: 10.5pt;
+  }
+  table.data-table tr:nth-child(even) {
+    background-color: #f8fafc;
+  }
+  .callout {
+    background-color: #eff6ff;
+    border-left: 5px solid #3b82f6;
+    padding: 15px 20px;
+    margin: 20px 0;
+    border-radius: 0 8px 8px 0;
+  }
+  .formula-box {
+    background-color: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    padding: 12px 18px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 10.5pt;
+    margin: 15px 0;
+    border-radius: 6px;
+    color: #0f172a;
+  }
+  .footer {
+    text-align: center;
+    font-size: 10pt;
+    color: #64748b;
+    margin-top: 60px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 20px;
+  }
+  .page-break {
+    page-break-before: always;
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <div class="title">FAIRSIGHT</div>
+  <div class="subtitle">Real-Time AI Bias Compliance, Mitigation & Firewall Infrastructure</div>
+  
+  <div class="badge-container">
+    <span class="badge badge-blue">GDSC Solution Challenge 2026</span>
+    <span class="badge badge-green">Team: Robo maters</span>
+    <span class="badge badge-purple">Google Cloud & Gemini Powered</span>
+  </div>
+
+  <table class="meta-table">
+    <tr>
+      <td class="meta-label">Project Name</td>
+      <td><strong>FairSight</strong></td>
+    </tr>
+    <tr>
+      <td class="meta-label">Development Team</td>
+      <td><strong>Robo maters</strong></td>
+    </tr>
+    <tr>
+      <td class="meta-label">Event / Initiative</td>
+      <td>Google Developer Student Clubs (GDSC) Solution Challenge 2026</td>
+    </tr>
+    <tr>
+      <td class="meta-label">UN Sustainable Development Goals</td>
+      <td>SDG 10 (Reduced Inequalities), SDG 8 (Decent Work), SDG 16 (Peace & Justice)</td>
+    </tr>
+    <tr>
+      <td class="meta-label">Core Mission</td>
+      <td>Detect • Explain • Fix • Prevent AI Bias — Before It Impacts Real People</td>
+    </tr>
+    <tr>
+      <td class="meta-label">Live GCP Cloud Run Deployment</td>
+      <td><a href="https://fairsight-frontend-967859676631.us-central1.run.app/">https://fairsight-frontend-967859676631.us-central1.run.app/</a></td>
+    </tr>
+    <tr>
+      <td class="meta-label">Live Vercel Edge Deployment</td>
+      <td><a href="https://fair-sight.vercel.app/">https://fair-sight.vercel.app/</a></td>
+    </tr>
+    <tr>
+      <td class="meta-label">Video Demonstration Walkthrough</td>
+      <td><a href="https://drive.google.com/file/d/134RP0yo_0PEiXXDFHH5u3_eFijMIvMto/view?usp=sharing">Watch Video Demo on Google Drive</a></td>
+    </tr>
+    <tr>
+      <td class="meta-label">Open Source Repository</td>
+      <td><a href="https://github.com/Ash-Technologia/FairSight">https://github.com/Ash-Technologia/FairSight</a></td>
+    </tr>
+  </table>
+</div>
+
+<div class="page-break"></div>
+
+<!-- SECTION 1: EXECUTIVE SUMMARY -->
+<h1>1. Executive Summary</h1>
+<p>
+Modern machine learning models increasingly automate high-stakes decisions across hiring, consumer lending, healthcare prioritization, and insurance pricing. While these automated decision systems promise efficiency, they silently scale and automate historical societal discrimination embedded in training datasets.
+</p>
+<p>
+<strong>FairSight</strong> is an end-to-end, production-ready <strong>AI Bias Compliance and Mitigation Platform</strong> created by team <strong>Robo maters</strong> for the <strong>GDSC Solution Challenge 2026</strong>. Siting between trained machine learning models and end users, FairSight functions as an intelligent firewall: detecting algorithmic disparities, synthesizing root causes through <strong>Google Gemini 2.0 Flash</strong> multi-LLM consensus, mathematically repairing datasets via the Kamiran & Calders reweighing algorithm, and intercepting discriminatory inferences before real people are harmed.
+</p>
+
+<!-- SECTION 2: PROBLEM STATEMENT -->
+<h1>2. Problem Statement: Algorithmic Discrimination</h1>
+
+<h2>2.1 The Silent Scaling of Algorithmic Discrimination</h2>
+<p>
+Unlike human decision-makers whose biases are bounded by individual capacity, biased algorithms scale discrimination across thousands or millions of users per minute:
+</p>
+<ul>
+  <li><strong>Employment Screening:</strong> Automated resume filters trained on historical technical hires systematically penalize female candidates and minority applicants.</li>
+  <li><strong>Credit & Lending:</strong> Underwriting algorithms produce lower loan approval rates and higher interest rates for minority applicants due to historical redlining and credit wealth gaps.</li>
+  <li><strong>Healthcare Prioritization:</strong> Clinical triage systems allocate lower priority and funding to minority patients with the same illness severity as majority patients.</li>
+  <li><strong>Criminal Justice:</strong> Recidivism scoring algorithms yield false-positive risk scores for minority defendants at nearly double the rate of majority defendants.</li>
+</ul>
+
+<h2>2.2 The "Fairness Through Blindness" Fallacy & Proxy Leakage</h2>
+<div class="callout">
+  <strong>The Blindness Fallacy:</strong> Merely dropping protected attributes (race, gender, age) from a model does NOT prevent discrimination. High-dimensional models easily reconstruct protected characteristics through correlational proxies.
+</div>
+<ul>
+  <li><strong>ZIP Code / Location:</strong> Acts as a direct proxy for race and socioeconomic status due to residential segregation.</li>
+  <li><strong>Alma Mater & Sports:</strong> Act as proxies for gender and class.</li>
+  <li><strong>Employment Gaps:</strong> Correlate strongly with pregnancy, maternity leave, and caregiving duties.</li>
+</ul>
+
+<h2>2.3 Global Regulatory Compliance Pressures</h2>
+<table class="data-table">
+  <tr>
+    <th>Regulation / Legal Standard</th>
+    <th>Jurisdiction</th>
+    <th>Legal Scope & Statutory Penalties</th>
+  </tr>
+  <tr>
+    <td><strong>EU AI Act (Regulation 2024/1689)</strong></td>
+    <td>European Union</td>
+    <td>Mandatory bias audits, data governance, and risk mitigation for High-Risk AI systems. Fines reach up to <strong>&euro;35,000,000 or 7% of total global annual turnover</strong>.</td>
+  </tr>
+  <tr>
+    <td><strong>US EEOC Uniform Guidelines (80% Rule)</strong></td>
+    <td>United States</td>
+    <td>Title VII enforcement: Selection rate for any race, sex, or ethnic group less than 4/5ths (80%) of the top group constitutes evidence of adverse impact.</td>
+  </tr>
+  <tr>
+    <td><strong>NYC Local Law 144</strong></td>
+    <td>New York City, USA</td>
+    <td>Mandates annual independent algorithmic bias audits for automated employment decision tools (AEDTs) before use.</td>
+  </tr>
+  <tr>
+    <td><strong>GDPR Article 22</strong></td>
+    <td>European Union</td>
+    <td>Protects individuals from solely automated decisions carrying legal effects and grants the right to human intervention.</td>
+  </tr>
+</table>
+
+<!-- SECTION 3: THE FAIRSIGHT SOLUTION -->
+<h1>3. The FairSight Solution</h1>
+
+<p>
+FairSight shifts algorithmic fairness from a retrospective, once-a-year audit into an <strong>active, continuous runtime compliance firewall</strong>.
+</p>
+
+<h2>3.1 How FairSight Works in Production</h2>
+<ol>
+  <li><strong>Ingest & Verify:</strong> Users upload datasets or stream inference payloads. Datasets are parsed in-memory, hashed via SHA-256 for cryptographic provenance, and scanned for PII.</li>
+  <li><strong>Calculate Disparity:</strong> The statistical engine computes Demographic Parity, Equalized Odds, Disparate Impact, and Intersectional Radar metrics.</li>
+  <li><strong>Multi-LLM Consensus Reasoning:</strong> Google Gemini 2.0 Flash coordinates with secondary LLMs to produce plain-English diagnostic narratives without hallucinations.</li>
+  <li><strong>Real-Time Interception (Firewall):</strong> Live inferences are counterfactually tested. If flipping a protected attribute changes the decision, the prediction is quarantined and routed to human review.</li>
+  <li><strong>Magic Debiasing:</strong> Reweighs training distributions mathematically (Kamiran & Calders) to generate a balanced, retraining-ready dataset.</li>
+  <li><strong>Certify:</strong> Generates regulator-ready PDF audit reports aligned with the EU AI Act and EEOC.</li>
+</ol>
+
+<div class="page-break"></div>
+
+<!-- SECTION 4: CORE FEATURES -->
+<h1>4. Key Features & Unique Selling Propositions (USPs)</h1>
+
+<table class="data-table">
+  <tr>
+    <th>Feature</th>
+    <th>Description</th>
+    <th>Key Benefit / USP</th>
+  </tr>
+  <tr>
+    <td><strong>Live Fairness Firewall</strong></td>
+    <td>Intercepts live model predictions pre-user delivery. Uses counterfactual perturbation to detect boundary flips.</td>
+    <td>Prevents unlawful discrimination in real time; sends flagged decisions to human review.</td>
+  </tr>
+  <tr>
+    <td><strong>AI Constitution</strong></td>
+    <td>Plain-English governance policies compiled by Gemini into mathematical constraints.</td>
+    <td>Enables legal and HR teams to govern AI without writing code or SQL.</td>
+  </tr>
+  <tr>
+    <td><strong>Multi-LLM Consensus Engine</strong></td>
+    <td>Quorum voting across Google Gemini 2.0 Flash, Groq (Llama 3.3), Mistral, and Hugging Face.</td>
+    <td>Guarantees 100% hallucination-free audit conclusions; highlights dissenting models.</td>
+  </tr>
+  <tr>
+    <td><strong>Intersectional Radar</strong></td>
+    <td>Multi-dimensional matrix scan evaluating cross-product sub-cohorts (Race &times; Gender, Age &times; Income).</td>
+    <td>Uncovers compound discrimination invisible in single-attribute audits.</td>
+  </tr>
+  <tr>
+    <td><strong>Magic Debiasing Engine</strong></td>
+    <td>Applies Kamiran & Calders (2012) statistical sample reweighing algorithm.</td>
+    <td>Outputs a balanced dataset ready for retraining without dropping data or sacrificing utility.</td>
+  </tr>
+  <tr>
+    <td><strong>One-Click Regulatory PDF</strong></td>
+    <td>ReportLab-powered cryptographic audit report generation.</td>
+    <td>Regulator-ready documentation mapped to EU AI Act Art. 10 and EEOC standards.</td>
+  </tr>
+  <tr>
+    <td><strong>Zero-Retention Privacy</strong></td>
+    <td>In-memory dataset parsing with SHA-256 fingerprinting and instant memory purge.</td>
+    <td>100% GDPR, HIPAA, and corporate privacy compliance.</td>
+  </tr>
+  <tr>
+    <td><strong>CI/CD Automated Gate</strong></td>
+    <td>REST endpoint (`GET /cicd/gate`) and dynamic SVG shield badges for GitHub Actions.</td>
+    <td>Halts automated deployment pipelines if a model falls below fairness thresholds.</td>
+  </tr>
+</table>
+
+<!-- SECTION 5: TECHNICAL ARCHITECTURE -->
+<h1>5. Technical Architecture & Tech Stack</h1>
+
+<table class="data-table">
+  <tr>
+    <th>Architecture Layer</th>
+    <th>Technologies & Frameworks</th>
+    <th>Responsibilities</th>
+  </tr>
+  <tr>
+    <td><strong>Frontend Application</strong></td>
+    <td>Next.js 14.2 (App Router), React 18, TypeScript 5, TailwindCSS, Framer Motion</td>
+    <td>Auditor dashboard, interactive disparity charts, sandbox simulator, and responsive UI.</td>
+  </tr>
+  <tr>
+    <td><strong>Backend API</strong></td>
+    <td>Python 3.11, FastAPI 0.110+, Uvicorn ASGI Server</td>
+    <td>High-throughput asynchronous REST endpoints, WebSocket live event streaming.</td>
+  </tr>
+  <tr>
+    <td><strong>Data Science Core</strong></td>
+    <td>Pandas 2.0, NumPy, Scikit-Learn, Fairlearn, SciPy</td>
+    <td>Statistical fairness calculation, proxy feature importance, and sample reweighing.</td>
+  </tr>
+  <tr>
+    <td><strong>AI Reasoning Layer</strong></td>
+    <td><strong>Google Gemini 2.0 Flash</strong>, Groq (Llama 3.3-70B), Mistral, HuggingFace</td>
+    <td>Sub-second diagnostic narrative, root cause analysis, and natural language rule translation.</td>
+  </tr>
+  <tr>
+    <td><strong>Cloud Infrastructure</strong></td>
+    <td><strong>Google Cloud Run</strong> (Serverless Containers), Firebase Auth, Cloud Firestore</td>
+    <td>Auto-scaling zero-idle backend hosting, user authentication, and persistent audit storage.</td>
+  </tr>
+  <tr>
+    <td><strong>Developer SDK</strong></td>
+    <td>Python `fairsight` client package (pip installable)</td>
+    <td>2-line drop-in model wrapper with background async batching and silent failover.</td>
+  </tr>
+</table>
+
+<!-- SECTION 6: MATHEMATICAL FORMULATIONS -->
+<h1>6. Mathematical Approach & Formulations</h1>
+
+<h3>6.1 Demographic Parity Difference (DPD)</h3>
+<div class="formula-box">
+  DPD = | P(Y_hat = 1 | A = 0) - P(Y_hat = 1 | A = 1) | &le; 0.10
+</div>
+<p>Ensures that the rate of positive outcomes is statistically independent of demographic group membership.</p>
+
+<h3>6.2 Disparate Impact Ratio (DIR) / Four-Fifths Rule</h3>
+<div class="formula-box">
+  DIR = P(Y_hat = 1 | A = 0) / P(Y_hat = 1 | A = 1) &ge; 0.80
+</div>
+<p>Directly measures compliance with the US EEOC 80% Rule under Title VII.</p>
+
+<h3>6.3 Equalized Odds Difference (EOD)</h3>
+<div class="formula-box">
+  EOD = max( |TPR_unprivileged - TPR_privileged|, |FPR_unprivileged - FPR_privileged| ) &le; 0.10
+</div>
+<p>Constrains both True Positive Rates and False Positive Rates to ensure equal predictive accuracy across groups.</p>
+
+<h3>6.4 Kamiran & Calders Reweighing Weight</h3>
+<div class="formula-box">
+  W(s, y) = [ P(S = s) &times; P(Y = y) ] / P(S = s &and; Y = y)
+</div>
+<p>Assigns sample weights during training such that the weighted demographic parity difference equals zero.</p>
+
+<div class="page-break"></div>
+
+<!-- SECTION 7: IMPACT & BENEFITS -->
+<h1>7. Impact, Benefits & UN SDG Alignment</h1>
+
+<h2>7.1 Societal Impact & Human Rights Protection</h2>
+<p>
+By intercepting biased algorithmic decisions in real time, FairSight prevents vulnerable populations from being unlawfully denied employment opportunities, bank loans, healthcare treatments, and insurance coverage. It operationalizes "Responsible AI" from abstract corporate pledges into mathematical runtime enforcement.
+</p>
+
+<h2>7.2 Corporate Risk Mitigation</h2>
+<ul>
+  <li><strong>Statutory Fine Immunity:</strong> Protects organizations from crippling penalties of up to &euro;35M under the EU AI Act.</li>
+  <li><strong>Brand & Reputational Protection:</strong> Eliminates the risk of public discrimination scandals and investigative algorithmic exposure.</li>
+  <li><strong>Operational Efficiency:</strong> Reduces internal compliance audit cycles from months of custom data science scripting to instantaneous automated reports.</li>
+</ul>
+
+<h2>7.3 Alignment with United Nations Sustainable Development Goals (SDGs)</h2>
+<ul>
+  <li><strong>🎯 SDG 10 (Reduced Inequalities):</strong> Direct target 10.3 — Eliminates discriminatory algorithms and promotes equal opportunity regardless of race, gender, age, or background.</li>
+  <li><strong>🎯 SDG 8 (Decent Work and Economic Growth):</strong> Ensures AI hiring and recruitment algorithms provide equitable access to employment for all qualified individuals.</li>
+  <li><strong>🎯 SDG 16 (Peace, Justice, and Strong Institutions):</strong> Builds accountable, transparent, and legally defensible automated institutions.</li>
+</ul>
+
+<!-- SECTION 8: DEPLOYMENT LINKS -->
+<h1>8. Live Deployments & Project Links</h1>
+
+<table class="data-table">
+  <tr>
+    <th>Platform</th>
+    <th>URL / Endpoint</th>
+    <th>Notes</th>
+  </tr>
+  <tr>
+    <td><strong>Google Cloud Run (Primary)</strong></td>
+    <td><a href="https://fairsight-frontend-967859676631.us-central1.run.app/">https://fairsight-frontend-967859676631.us-central1.run.app/</a></td>
+    <td>Primary production deployment hosted on Google Cloud Run.</td>
+  </tr>
+  <tr>
+    <td><strong>Vercel Edge (Backup)</strong></td>
+    <td><a href="https://fair-sight.vercel.app/">https://fair-sight.vercel.app/</a></td>
+    <td>Global edge mirror for instant latency response.</td>
+  </tr>
+  <tr>
+    <td><strong>YouTube Video Walkthrough</strong></td>
+    <td><a href="https://drive.google.com/file/d/134RP0yo_0PEiXXDFHH5u3_eFijMIvMto/view?usp=sharing">Watch Video Demo</a></td>
+    <td>Complete recorded walkthrough demonstrating all features.</td>
+  </tr>
+  <tr>
+    <td><strong>GitHub Repository</strong></td>
+    <td><a href="https://github.com/Ash-Technologia/FairSight">https://github.com/Ash-Technologia/FairSight</a></td>
+    <td>Full source code, tests, documentation, and SDK.</td>
+  </tr>
+</table>
+
+<div class="footer">
+  FairSight &bull; Built with pride by Team <strong>Robo maters</strong> for the <strong>GDSC Solution Challenge 2026</strong>.<br>
+  &copy; 2026 Robo maters. Licensed under the MIT License.
+</div>
+
+</body>
+</html>
